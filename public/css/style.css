@@ -4,3 +4,11 @@ body {
   background-attachment: fixed;
   background-position: right bottom;
 }
+
+table.programs {
+
+}
+
+table.programs th.program-state-header {
+  width: 8em;
+}
