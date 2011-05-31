@@ -9,7 +9,8 @@ class ProcNanny
     @socketio.on("message", (obj) => @receive(obj))
     @socketio.on("disconnect", () => @connect())
 
-  receive: (obj) -> console.log(obj)
+  receive: (obj) -> 
+    console.log(obj)
 # end class ProcNanny
 
 pn = new ProcNanny()
