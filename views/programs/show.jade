@@ -6,10 +6,13 @@ div(id="program-" + program.name)
       span(class="program-state")= program.state()
     li Pid: 
       span(class="program-pid")= program.pid()
+    li Command: 
+      span(class="program-command")= program.command + " " + program.args.join(" ")
 
-  pre(class="stdout") testing
+  p Output:
+  pre(class="stdout")
 
-  pre(class="stderr") testing
+  pre(class="stderr__")
 
   script
     ph = new ProcNanny("#{program.name}")

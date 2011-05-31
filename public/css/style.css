@@ -22,10 +22,10 @@ table.programs tr.sad {
 }
 
 pre.stdout, pre.stderr {
-  border: 1px solid grey;
-  margin: 0.4em;
-  padding: 0.4em;
-  width: 70%;
-  height: 15em;
-  overflow: auto;
+  //border: 1px solid grey;
+  //margin: 0.4em;
+  //padding: 0.4em;
+  //width: 90%;
+  //height: 15em;
+  //overflow: auto;
 }

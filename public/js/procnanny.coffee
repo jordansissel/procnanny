@@ -52,7 +52,16 @@ class ProcNanny
 
   update_output: (target, data) ->
     console.log(data)
-    $("pre." + target).get(0).childNodes[0].appendData(data)
+
+    #$("pre." + target).get(0).childNodes[0].appendData(data)
+    #$("pre.stdout").get(0).childNodes[0].appendData(data)
+    el = $("pre.stdout").get(0)
+    textnode = el.childNodes[0]
+    if !textnode?
+      el.appendChild(document.createTextNode(data))
+    else
+      textnode.appendData(data)
+    # end if
   # end update_output
 # end class ProcNanny
 
