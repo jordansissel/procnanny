@@ -23,6 +23,8 @@ class Nanny extends EventEmitter
 
   parse_config: () ->
     @start("echo", ["echo", "hello world"])
+    @start("nagios", ["/usr/sbin/nagios3", "-d", "/etc/nagios3/nagios.cfg"])
+    @start("nginx", ["/usr/sbin/nginx"])
     @start("sleep1", ["sleep", "9"])
     @start("sleep2", ["sleep", "1"])
     @start("sleep3", ["sleep", "33"])
@@ -41,6 +43,8 @@ class Nanny extends EventEmitter
     program = new Program({name:name, args:args})
     program.on("started", () => @emit("program-started", program))
     program.on("exited", (reason) => @emit("program-exited", program, reason))
+    program.on("stdout", (data) => @emit("program-stdout", program, data))
+    program.on("stderr", (data) => @emit("program-stderr", program, data))
 
     program.start()
     @programs[name] = program

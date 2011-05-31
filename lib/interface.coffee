@@ -27,8 +27,16 @@ class Interface
   # end constructor
 
   new_socketio_client: (client) ->
-    client.on("message", () => console.log(this))
+    client.on("message", (msg) => 
+      if msg.action == "subscribe"
+        client._only_program = msg.program
+    )
+
     @nanny.on("program-started", (program) =>
+      if client._only_program?
+        return if client._only_program != program.name
+      # end if
+
       client.send({ 
         "event": "program-started",
         "program": program.name,
@@ -36,12 +44,43 @@ class Interface
         "pid": program.pid(),
       })
     )
+
     @nanny.on("program-exited", (program, reason) =>
+      if client._only_program?
+        return if client._only_program != program.name
+      # end if
+
       client.send({ 
         "event": "program-exited",
         "program": program.name,
         "state": program.state(),
         "reason": reason
+      })
+    )
+
+    @nanny.on("program-stdout", (program, data) =>
+      if client._only_program?
+        return if client._only_program != program.name
+      # end if
+
+      client.send({ 
+        "event": "program-stdout",
+        "program": program.name,
+        "state": program.state(),
+        "data": data
+      })
+    )
+
+    @nanny.on("program-stderr", (program, data) =>
+      if client._only_program?
+        return if client._only_program != program.name
+      # end if
+
+      client.send({ 
+        "event": "program-stderr",
+        "program": program.name,
+        "state": program.state(),
+        "data": data
       })
     )
   # end new_socketio_client

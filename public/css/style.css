@@ -12,3 +12,20 @@ table.programs {
 table.programs th.program-state-header {
   width: 8em;
 }
+
+table.programs tr.happy {
+  background-color: #E8FFE9;
+}
+
+table.programs tr.sad {
+  background-color: #FFE8E8;
+}
+
+pre.stdout, pre.stderr {
+  border: 1px solid grey;
+  margin: 0.4em;
+  padding: 0.4em;
+  width: 70%;
+  height: 15em;
+  overflow: auto;
+}

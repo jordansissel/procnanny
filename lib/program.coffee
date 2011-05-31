@@ -40,9 +40,19 @@ class Program extends EventEmitter
     # TODO(sissel): Start N procs according to @numprocs
     @child = child_process.spawn(@command, @args)
     @child.on("exit", (code, signal) => @exited(code, signal))
+
+    @child.stdout.setEncoding("utf8")
+    @child.stdout.on("data", (data) => @stdout(data))
+
+    @child.stderr.setEncoding("utf8")
+    @child.stderr.on("data", (data) => @stderr(data))
+
     @state("started")
     @emit("started")
   # end start
+  
+  stdout: (data) -> @emit("stdout", data)
+  stderr: (data) -> @emit("stderr", data)
 
   signal: (signal) -> @child.kill(signal) if @child?
 

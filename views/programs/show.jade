@@ -1,5 +1,16 @@
 h1 program: #{program.name}
 
-ul
-  li State: #{program.state()}
-  li Pid: #{program.pid()}
+div(id="program-" + program.name)
+  ul
+    li State: 
+      span(class="program-state")= program.state()
+    li Pid: 
+      span(class="program-pid")= program.pid()
+
+  pre(class="stdout") testing
+
+  pre(class="stderr") testing
+
+  script
+    ph = new ProcNanny("#{program.name}")
+
