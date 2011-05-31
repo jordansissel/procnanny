@@ -1,0 +1,6 @@
+body {
+  background-image: url("/media/trollface.jpg");
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: right bottom;
+}
