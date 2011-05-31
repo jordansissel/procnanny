@@ -37,12 +37,11 @@ class Program extends EventEmitter
   start: () ->
     # TODO(sissel): Track history
     clearTimeout(@start_timer) if @start_timer?
-    @emit("started")
-    @state("started")
-
     # TODO(sissel): Start N procs according to @numprocs
     @child = child_process.spawn(@command, @args)
     @child.on("exit", (code, signal) => @exited(code, signal))
+    @state("started")
+    @emit("started")
   # end start
 
   signal: (signal) -> @child.kill(signal) if @child?
@@ -66,18 +65,16 @@ class Program extends EventEmitter
   
   restart: () -> 
     console.log("Restarting " + @name)
-    @signal("SIGTERM")
-    @state("restarting")
+
+    if @child?
+      @signal("SIGTERM")
+      @state("restarting")
+    else
+      @start()
 
   exited: (code, signal) ->
     # TODO(sissel): Track history
     console.log(@name + " exited: " + code + "/" + signal)
-
-    if code?
-      @emit("exited", code)
-    else
-      @emit("exited", signal)
-
     if @state() != "stopping"
       @state("died/restarting")
       callback = () => @start()
@@ -86,6 +83,12 @@ class Program extends EventEmitter
       @state("stopped")
     # end if
     @child = undefined
+
+    if code?
+      @emit("exited", code)
+    else
+      @emit("exited", signal)
+
   # end exited
 
   state: (state) ->

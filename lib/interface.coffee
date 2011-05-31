@@ -29,10 +29,20 @@ class Interface
   new_socketio_client: (client) ->
     client.on("message", () => console.log(this))
     @nanny.on("program-started", (program) =>
-      client.send("Program started: " + program.named)
+      client.send({ 
+        "event": "program-started",
+        "program": program.name,
+        "state": program.state(),
+        "pid": program.pid(),
+      })
     )
     @nanny.on("program-exited", (program, reason) =>
-      client.send("Program died: " + program.named + ", " + reason)
+      client.send({ 
+        "event": "program-exited",
+        "program": program.name,
+        "state": program.state(),
+        "reason": reason
+      })
     )
   # end new_socketio_client
 

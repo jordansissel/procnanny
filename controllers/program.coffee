@@ -22,8 +22,14 @@ class ProgramController
     })
   # end show
 
-  stop: (request, response) -> null
-  start: (request, response) -> null
+  stop: (request, response) -> 
+    @nanny.programs[request.params.name].stop()
+    response.send("OK\n")
+
+  start: (request, response) ->
+    @nanny.programs[request.params.name].start()
+    response.send("OK\n")
+
   restart: (request, response) -> 
     @nanny.programs[request.params.name].restart()
     response.send("OK\n")

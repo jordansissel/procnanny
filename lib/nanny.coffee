@@ -24,7 +24,7 @@ class Nanny extends EventEmitter
   parse_config: () ->
     @start("echo", ["echo", "hello world"])
     @start("sleep1", ["sleep", "9"])
-    @start("sleep2", ["sleep", "15"])
+    @start("sleep2", ["sleep", "1"])
     @start("sleep3", ["sleep", "33"])
     @start("sleep4", ["sleep", "74"])
     @start("sleep5", ["sleep", "55"])
