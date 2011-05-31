@@ -15,3 +15,8 @@ Because I hate you.
 * Is this trollware?
 
 Probably.
+
+* What else?
+
+If I find node.js sufficiently annoying (as I am likely to do), I will abandon
+this effort.
