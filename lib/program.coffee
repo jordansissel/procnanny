@@ -35,6 +35,7 @@ class Program extends EventEmitter
   # end constructor
   
   start: () ->
+    return if @child?
     # TODO(sissel): Track history
     clearTimeout(@start_timer) if @start_timer?
     # TODO(sissel): Start N procs according to @numprocs
