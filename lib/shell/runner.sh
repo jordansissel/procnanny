@@ -7,7 +7,7 @@
 
 if [ ! -z "$PROC_USER" -a -z "$PROC_USER_SWITCHED_OK" ] ; then
   #exec env PROC_USER_SWITCHED_OK=1 setuidgid $PROC_USER sh $0 "$@"
-  exec env PROC_USER_SWITCHED_OK=1 su -m - $PROC_USER $0 "$@" 
+  exec env PROC_USER_SWITCHED_OK=1 su -m - $PROC_USER -- $0 "$@" 
   exit
 fi
 
