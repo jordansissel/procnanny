@@ -5,6 +5,7 @@ table(class="programs")
     th(class="program-name-header") Name
     th(class="program-pid-header") Pid
     th(class="program-state-header") State
+    th(class="program-state-header") Last Update
     th(class="program-command-header") Command
   - each program in programs
     tr(id="program-" + program.name)
@@ -12,6 +13,7 @@ table(class="programs")
         a(href="/programs/" + program.name)= program.name
       td(class="program-pid")= program.pid()
       td(class="program-state")= program.state()
+      td(class="program-last-update")= program.last_change.toISOString()
       td(class="program-command")= program.command + " " + program.args.join(" ")
 
 script

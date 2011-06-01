@@ -13,6 +13,10 @@ table.programs th.program-state-header {
   width: 8em;
 }
 
+table.programs td.program-last-update {
+  white-space: nowrap;
+}
+
 table.programs tr.happy {
   background-color: #E8FFE9;
 }
