@@ -41,6 +41,15 @@ class Interface
         event: "program-started",
         program: program.name,
         state: program.state(),
+        config: {
+          command: program.args[0]
+          args: program.args.slice(1)
+          user: program.user
+          directory: program.directory
+          ulimits: program.ulimit
+          numprocs: program.numprocs
+          nice: program.nice
+        },
         last_update: program.last_change.toISOString(),
         pid: program.pid(),
       })

@@ -6,6 +6,8 @@ table(class="programs")
     th(class="program-pid-header") Pid
     th(class="program-state-header") State
     th(class="program-state-header") Last Update
+    th(class="program-instances") N
+    th(class="program-user") User
     th(class="program-command-header") Command
   - each program in programs
     tr(id="program-" + program.name)
@@ -14,6 +16,8 @@ table(class="programs")
       td(class="program-pid")= program.pid()
       td(class="program-state")= program.state()
       td(class="program-last-update")= program.last_change.toISOString()
+      td(class="program-instances")= program.numprocs
+      td(class="program-user")= program.user
       td(class="program-command")= program.command + " " + program.args.join(" ")
 
 script

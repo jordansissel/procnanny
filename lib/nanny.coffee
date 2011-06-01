@@ -34,11 +34,11 @@ class Nanny extends EventEmitter
     @start("nginx", ["/usr/sbin/nginx"])
     @start("sleep1", ["sleep", "9"])
     @start("sleep2", ["sleep", "1"])
-    @start("sleep3", ["sleep", "33"])
-    @start("sleep4", ["sleep", "74"])
-    @start("sleep5", ["sleep", "55"])
-    @start("sleep6", ["sleep", "40"])
-    @start("sleep7", ["sleep", "45"])
+    @start("build xdotool", ["make", "clean", "all", "test"], {
+      user: "jls",
+      directory: "/home/jls/projects/xdotool"
+      #type: job
+    })
   # end parse_config
 
   run_interface: () ->

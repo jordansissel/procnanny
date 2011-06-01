@@ -6,8 +6,21 @@ div(id="program-" + program.name)
       span(class="program-state")= program.state()
     li Pid: 
       span(class="program-pid")= program.pid()
-    li Command: 
+    li User: 
+      span(class="program-user")= program.user
+    li Instances: 
+      span(class="program-instances")= program.numprocs
+    li Command:  
       span(class="program-command")= program.command + " " + program.args.join(" ")
+
+  p 
+    span Actions:
+    a(href="/programs/" + program.name + "/start") start
+    |
+    a(href="/programs/" + program.name + "/stop") stop
+    |
+    a(href="/programs/" + program.name + "/restart") restart
+  
 
   p Output:
   pre(class="stdout")

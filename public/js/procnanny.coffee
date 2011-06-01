@@ -41,6 +41,8 @@ class ProcNanny
     $(basequery + " .program-pid").html(obj.pid)
     $(basequery + " .program-state").html(obj.state)
     $(basequery + " .program-last-update").html(obj.last_update)
+    $(basequery + " .program-user").html(obj.config.user)
+    $(basequery + " .program-instances").html(obj.config.numprocs)
 
     if obj.event == "program-started"
       $(basequery).removeClass("sad")

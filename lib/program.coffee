@@ -25,7 +25,7 @@ class Program extends EventEmitter
     @command = options.args[0]
     @args = options.args.slice(1)
 
-    @user = options.user
+    @user = options.user or "root"
     @directory = options.directory
     @ulimits = options.ulimit
     @numprocs = options.numprocs or 1
