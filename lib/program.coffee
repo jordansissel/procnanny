@@ -1,6 +1,7 @@
 child_process = require('child_process')
 EventEmitter = require("events").EventEmitter
 
+
 # Program:
 #   name
 #   command+args
@@ -18,18 +19,31 @@ EventEmitter = require("events").EventEmitter
 
 class Program extends EventEmitter
   constructor: (options) ->
+    @setMaxListeners(100)
+
     @name = options.name
     @command = options.args[0]
     @args = options.args.slice(1)
-    #@user = options.user
-    #@environment = options.environment
-    #@directory = options.directory
-    #@ulimits = options.ulimit
 
-    #@log_stdout = ...
-    #@log_stderr = ...
+    @user = options.user
+    @directory = options.directory
+    @ulimits = options.ulimit
     @numprocs = options.numprocs or 1
     @nice = options.nice or 0
+
+    @environment = {}
+    for name,value of process.env
+      @environment[name] = value
+
+    for name,value of options.environment
+      @environment[name] = value
+
+    @environment["PROC_USER"] = @user if @user?
+    @environment["PROC_DIRECTORY"] = @directory if @directory?
+    @environment["PROC_NICE"] = @nice
+
+    for type, value of @ulimits
+      @environment["PROC_ULIMIT_" + type.toUpperCase()] = value
 
     @state("new")
   # end constructor
@@ -39,13 +53,19 @@ class Program extends EventEmitter
     # TODO(sissel): Track history
     clearTimeout(@start_timer) if @start_timer?
     # TODO(sissel): Start N procs according to @numprocs
-    @child = child_process.spawn(@command, @args)
+    runner = __dirname + "/shell/runner.sh"
+    args = [runner, @command].concat(@args)
+
+    @child = child_process.spawn("sh", args, {
+      env: @environment 
+    })
+
     @child.on("exit", (code, signal) => @exited(code, signal))
 
     @child.stdout.setEncoding("utf8")
-    @child.stdout.on("data", (data) => @stdout(data))
-
     @child.stderr.setEncoding("utf8")
+
+    @child.stdout.on("data", (data) => @stdout(data))
     @child.stderr.on("data", (data) => @stderr(data))
 
     @state("started")
@@ -103,7 +123,10 @@ class Program extends EventEmitter
   # end exited
 
   state: (state) ->
-    @_state = state if state?
+    if state?
+      @last_change = (new Date())
+      @_state = state
+    # end if 
     @_state
   # end state
 

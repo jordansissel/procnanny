@@ -4,6 +4,7 @@ EventEmitter = require("events").EventEmitter
 
 class Nanny extends EventEmitter
   constructor: () ->
+    @setMaxListeners(100)
     @config_paths = [ "./programs.d", "/etc/procnanny/programs.d" ]
     @programs = {}
     @sequence = 0
@@ -22,8 +23,14 @@ class Nanny extends EventEmitter
   # end register_signal_handlers
 
   parse_config: () ->
-    @start("echo", ["echo", "hello world"])
-    @start("nagios", ["/usr/sbin/nagios3", "-d", "/etc/nagios3/nagios.cfg"])
+    @start("echo", ["echo", "hello world"], {
+      user: "nobody",
+      directory: "/tmp"
+      ulimit: {
+        files: 3000
+      }
+    })
+    @start("nagios", ["/usr/sbin/nagios3", "/etc/nagios3/nagios.cfg"])
     @start("nginx", ["/usr/sbin/nginx"])
     @start("sleep1", ["sleep", "9"])
     @start("sleep2", ["sleep", "1"])
@@ -39,8 +46,10 @@ class Nanny extends EventEmitter
     @interface.run()
   # end run_interface
 
-  start: (name, args) ->
-    program = new Program({name:name, args:args})
+  start: (name, args, options={}) ->
+    options.name = name
+    options.args = args
+    program = new Program(options)
     program.on("started", () => @emit("program-started", program))
     program.on("exited", (reason) => @emit("program-exited", program, reason))
     program.on("stdout", (data) => @emit("program-stdout", program, data))

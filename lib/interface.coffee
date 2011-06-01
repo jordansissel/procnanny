@@ -38,10 +38,11 @@ class Interface
       # end if
 
       client.send({ 
-        "event": "program-started",
-        "program": program.name,
-        "state": program.state(),
-        "pid": program.pid(),
+        event: "program-started",
+        program: program.name,
+        state: program.state(),
+        last_update: program.last_change.toISOString(),
+        pid: program.pid(),
       })
     )
 
@@ -51,36 +52,37 @@ class Interface
       # end if
 
       client.send({ 
-        "event": "program-exited",
-        "program": program.name,
-        "state": program.state(),
-        "reason": reason
+        event: "program-exited",
+        program: program.name,
+        state: program.state(),
+        last_update: program.last_change.toISOString(),
+        reason: reason
       })
     )
 
     @nanny.on("program-stdout", (program, data) =>
-      if client._only_program?
-        return if client._only_program != program.name
-      # end if
+      # Only ship stdout if we are watching one program.
+      return if client._only_program != program.name
 
       client.send({ 
-        "event": "program-stdout",
-        "program": program.name,
-        "state": program.state(),
-        "data": data
+        event: "program-stdout",
+        program: program.name,
+        state: program.state(),
+        last_update: program.last_change.toISOString(),
+        data: data
       })
     )
 
     @nanny.on("program-stderr", (program, data) =>
-      if client._only_program?
-        return if client._only_program != program.name
-      # end if
+      # Only ship stdout if we are watching one program.
+      return if client._only_program != program.name
 
       client.send({ 
-        "event": "program-stderr",
-        "program": program.name,
-        "state": program.state(),
-        "data": data
+        event: "program-stderr",
+        program: program.name,
+        state: program.state(),
+        last_update: program.last_change.toISOString(),
+        data: data
       })
     )
   # end new_socketio_client
