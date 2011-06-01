@@ -26,11 +26,15 @@ class Program extends EventEmitter
     @args = options.args.slice(1)
 
     #@user = options.user or "root"
-    @user = options.user or process.getuid()
+    @user = options.user
     @directory = options.directory
     @ulimits = options.ulimit
     @numprocs = options.numprocs or 1
     @nice = options.nice or 0
+
+    if !@user?
+      @user = "root" if process.getuid() == 0
+    # end if
 
     @environment = {}
     for name,value of process.env
