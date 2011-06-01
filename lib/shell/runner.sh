@@ -12,13 +12,13 @@ if [ ! -z "$PROC_USER" -a -z "$PROC_USER_SWITCHED_OK" ] ; then
   exec env PROC_USER_SWITCHED_OK=1 setuidgid $username $0 "$@"
   #exec env PROC_USER_SWITCHED_OK=1 su -m - $PROC_USER $0 "$@" 
   echo "Something bad happened, maybe we couldn't find 'env' or 'setuidgid' ?"
-  exit
+  exit 255
 fi
 
 if [ ! -z "$PROC_NICE" -a -z "$PROC_NICE_SWITCHED_OK" ] ; then
   exec env PROC_NICE_SWITCHED_OK=1 nice -n $PROC_NICE $0 "$@"
   echo "Something bad happened, maybe we couldn't find 'env' or 'nice' ?"
-  exit
+  exit 255
 fi
 
 #ulimit -n
