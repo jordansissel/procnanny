@@ -9,6 +9,8 @@
 #include <sys/resource.h> /* for struct rlimit */
 #include <stdio.h> /* for FILE */
 
+struct program;
+
 struct process {
   pid_t pid; /** the pid of the process */
   int admin_state; /** the administrative state, up or down, etc */
@@ -18,6 +20,12 @@ struct process {
   int exit_signal;
   struct timespec start_time;
   struct timespec end_time;
+
+  /* pointer to parent program */
+  struct program *program;
+
+  /* arbitrary data you can assign to this process */
+  void *data;
 };
 
 struct program {
@@ -39,6 +47,9 @@ struct program {
   int nprocs; /** number of instances to run */
 
   int is_running; /** is this program active? */
+
+  /* arbitrary data you can assign to this process */
+  void *data;
 };
 
 /** 
@@ -80,6 +91,7 @@ enum program_options {
   PROGRAM_GROUP = 8,
   PROGRAM_NICE = 9,
   PROGRAM_IONICE = 10,
+  PROGRAM_DATA = 11,
 
   /* resource limits */
   PROGRAM_LIMIT_FILES = 20,
@@ -87,9 +99,13 @@ enum program_options {
   //PROGRAM_LIMIT_PROCESSES = 22,
 };
 
-enum pn_error_codes {
+enum pn_return_codes {
+  PN_OK = 0,
+  PN_FALSE = 0,
+  PN_TRUE = 1,
   PN_OPTION_INVALID = 2,
   PN_OPTION_BAD_VALUE = 3,
+  PN_BAD_REQUEST = 4,
 };
 
 struct ulimit {
@@ -98,6 +114,7 @@ struct ulimit {
 };
 
 typedef struct program program_t;
+typedef struct process process_t;
 
 void pn_prog_init(program_t *program);
 
@@ -110,11 +127,47 @@ int pn_prog_get(program_t *program, int option_name, void *option_value,
                  size_t *option_len);
 
 int pn_prog_start(program_t *program);
-int pn_prog_print(FILE *fp, program_t *program);
+void pn_prog_print(FILE *fp, program_t *program);
+
+void pn_proc_print(FILE *fp, process_t *process, int procnum, int indent);
+
+
+/** This is a way for external tools, like libev, to be used
+ * and still notify a program of a pid exit.
+ */
+//int pn_prog_proc_exited(program_t *program, pid_t pid, int status);
+void pn_proc_exited(process_t *process, int status);
+
+int pn_prog_running(program_t *program);
+
+int pn_prog_proc_start(process_t *process);
 
 int pn_prog_wait(program_t *program);
-
 int pn_prog_proc_wait(program_t *program, int instance);
 int pn_prog_proc_running(program_t *program, int instance);
+
+pid_t pn_proc_pid(process_t *process);
+int pn_proc_wait(process_t *process);
+int pn_proc_running(process_t *process);
+
+program_t *pn_proc_program(process_t *process);
+
+/** Iterate over processes for this program.
+ *
+ * @param program - a pointer to a program_t
+ * @param varname - the variable name to hold the 'process_t' for each
+ *   iteration
+ * @param block - a block of code.
+ */
+#define pn_prog_proc_each(program, varname, block) \
+{ \
+  int i = 0; \
+  for (i = 0; i < (program)->nprocs; i++) { \
+    process_t *varname = &(program)->processes[i]; \
+    { \
+      block \
+    } \
+  } \
+}
 
 #endif /* _PN_PROGRAM_H_ */

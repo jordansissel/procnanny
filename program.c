@@ -24,7 +24,7 @@ void pn_prog_init(program_t *program) {
   program->nice = 0;
   program->ionice = 0;
 
-  program->processes = calloc(program->nprocs, sizeof(struct process));
+  program->processes = calloc(program->nprocs, sizeof(process_t));
 
   program->is_running = 0;
 }
@@ -62,10 +62,11 @@ int pn_prog_set(program_t *program, int option_name, const void *option_value,
       break;
     case PROGRAM_NUMPROCS:
       check_size(option_len, int, "PROGRAM_NUMPROCS");
-      insist_return(!program->is_running, PN_OPTION_BAD_VALUE,
+      insist_return(!pn_prog_running(program), PN_OPTION_BAD_VALUE,
                     "This program (%s) is running. To change the number of "
                     "instances, stop the program first.", program->name);
-      program->nprocs = *(int *)option_value; program->processes = calloc(program->nprocs, sizeof(struct process));
+      program->nprocs = *(int *)option_value;
+      program->processes = calloc(program->nprocs, sizeof(process_t));
       break;
     case PROGRAM_UID:
       check_size(option_len, uid_t, "PROGRAM_UID");
@@ -93,6 +94,8 @@ int pn_prog_set(program_t *program, int option_name, const void *option_value,
     default:
       return PN_OPTION_INVALID;
   } /* switch (option_name) */
+
+  return PN_OK;
 } /* int pn_prog_set */
 
 int pn_prog_get(program_t *program, int option_name, void *option_value,
@@ -146,18 +149,26 @@ int pn_prog_get(program_t *program, int option_name, void *option_value,
     default:
       return PN_OPTION_INVALID;
   } /* switch (option_name) */
+
+  return PN_OK;
 } /* int pn_prog_get */
 
 int pn_prog_start(program_t *program) {
   int i = 0;
+
+  program->is_running = PN_TRUE;
+  /* TODO(sissel): This should use pn_prog_proc_each */
   for (i = 0; i < program->nprocs; i++) {
     _pn_prog_spawn(program, i);
   }
+
+  return PN_OK;
 }
 
 int _pn_prog_spawn(program_t *program, int instance) {
-  struct process *process;
+  process_t *process;
   process = &program->processes[instance];
+  process->program = program;
 
   /* set start clock */
   clock_gettime(CLOCK_REALTIME, &process->start_time);
@@ -175,6 +186,8 @@ int _pn_prog_spawn(program_t *program, int instance) {
      * Maybe send a message that execvp failed using zeromq? */
     exit(255);
   }
+
+  return PN_OK;
 }
 
 int pn_prog_wait(program_t *program) {
@@ -182,46 +195,103 @@ int pn_prog_wait(program_t *program) {
   for (i = 0; i < program->nprocs; i++) {
     pn_prog_proc_wait(program, i);
   } /* for each process */
+
+  return PN_OK;
 } /* int pn_prog_wait */
 
 int pn_prog_proc_wait(program_t *program, int instance) {
-  if (pn_prog_proc_running(program, instance)) {
-    struct process *process = &program->processes[instance];
-    int status = 0;
-    int rc = 0;
-    rc = waitpid(process->pid, &status, 0);
-    if (rc >= 0) {
-      process->state = PROCESS_STATE_EXITED;
-      if (WIFSIGNALED(status)) {
-        process->exit_status = -1;
-        process->exit_signal = WTERMSIG(status);
-      } else {
-        process->exit_status = WEXITSTATUS(status);
-        process->exit_signal = 0;
-      }
-    } /* if rc >= 0 */
-  } /* if process is running */
+  insist_return(pn_prog_running(program), PN_BAD_REQUEST,
+                "This program (%s) is not running. Nothing to wait on.",
+                program->name);
+  insist_return(program->nprocs > instance, PN_BAD_REQUEST,
+                "There are only %d instances, you asked for %d.",
+                program->nprocs, instance);
+
+  process_t *process = &program->processes[instance];
+  return pn_proc_wait(process);
+} /* int pn_prog_proc_wait */
+
+int pn_proc_wait(process_t *process) {
+  if (!pn_proc_running(process)) {
+    return PN_OK;
+  }
+
+  int status = 0;
+  int rc = 0;
+  rc = waitpid(pn_proc_pid(process), &status, 0);
+  if (rc >= 0) {
+    pn_proc_exited(process, status);
+  } /* if rc >= 0 */
+
+  return PN_OK;
 } /* pn_prog_proc_wait */
 
-int pn_prog_print(FILE *fp, program_t *program) {
+
+
+void pn_prog_print(FILE *fp, program_t *program) {
   int i = 0;
-  printf("Program: %s (%d instance%s)\n", program->name, program->nprocs,
-         program->nprocs == 1 ? "" : "s");
+  fprintf(fp, "Program: %s (%d instance%s)\n", program->name, program->nprocs,
+          program->nprocs == 1 ? "" : "s");
   
-  for (i = 0; i < program->nprocs; i++) {
-    struct process *process = &program->processes[i];
-    if (process->exit_signal) {
-      printf("  %d: pid:%d exitsignal:%d\n", i, process->pid, process->exit_signal);
-    } else {
-      printf("  %d: pid:%d exitcode:%d\n", i, process->pid, process->exit_status);
-    }
-  }
-  return 0;
+  pn_prog_proc_each(program, process, {
+    pn_proc_print(fp, process, i, 2);
+  });
 } /* int pn_prog_print */
 
+void pn_proc_print(FILE *fp, process_t *process, int procnum, int indent) {
+  static const char spaces[] = "                                        ";
+  if (process->exit_signal) {
+    fprintf(fp, "%.*s%d: pid:%d exitsignal:%d\n", indent, spaces, procnum,
+            process->pid, process->exit_signal);
+  } else {
+    fprintf(fp, "%.*s%d: pid:%d exitcode:%d\n", indent, spaces,  procnum,
+            process->pid, process->exit_status);
+  }
+}
+
 int pn_prog_proc_running(program_t *program, int instance) {
-  struct process *process = &program->processes[instance];
+  process_t *process = &program->processes[instance];
+
+  return pn_proc_running(process);
+}
+
+int pn_proc_running(process_t *process) {
   return process->state != PROCESS_STATE_EXITED \
          && process->state != PROCESS_STATE_BACKOFF;
 }
 
+pid_t pn_prog_proc_pid(program_t *program, int instance) {
+  insist_return(pn_prog_running(program), PN_BAD_REQUEST,
+                "This program (%s) is not running. No pid to get.",
+                program->name);
+  insist_return(program->nprocs > instance, PN_BAD_REQUEST,
+                "There are only %d instances, you asked for %d.",
+                program->nprocs, instance);
+
+  return pn_proc_pid(&program->processes[instance]);
+} /* int pn_prog_proc_pid */
+
+pid_t pn_proc_pid(process_t *process) {
+  return process->pid;
+}
+
+/* pn_prog_proc_each  is defined in program.h */
+
+int pn_prog_running(program_t *program) {
+  return program->is_running;
+}
+
+program_t *pn_proc_program(process_t *process) {
+  return process->program;
+}
+
+void pn_proc_exited(process_t *process, int status) { 
+  process->state = PROCESS_STATE_EXITED;
+  if (WIFSIGNALED(status)) {
+    process->exit_status = -1;
+    process->exit_signal = WTERMSIG(status);
+  } else {
+    process->exit_status = WEXITSTATUS(status);
+    process->exit_signal = 0;
+  }
+}
