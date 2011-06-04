@@ -1,6 +1,8 @@
 #ifndef _PN_PROGRAM_H_
 #define _PN_PROGRAM_H_
 
+/* TODO(sissel): put the 'process_t' and pn_proc* methods in process.h */
+
 /** TODO(sissel): Maybe track 'health' states? */
 
 #include <unistd.h> /* for pid_t */

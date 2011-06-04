@@ -5,6 +5,7 @@
 #include <sys/wait.h> /* for waitpid, WIFSIGNALED, etc */
 
 /* TODO(sissel): make copies of name, args, command, and any other strings */
+/* TODO(sissel): split the pn_proc (process) methods into process.c */
 
 #define check_size(size, type, name) \
   insist_return(size == sizeof(type), PN_OPTION_BAD_VALUE, \
