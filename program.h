@@ -23,6 +23,8 @@ struct process {
 
   /* pointer to parent program */
   struct program *program;
+  /* the instance (program->processes[instance] etc) */
+  int instance;
 
   /* arbitrary data you can assign to this process */
   void *data;
@@ -78,6 +80,7 @@ enum process_states {
   PROCESS_STATE_STOPPING = 3,
   PROCESS_STATE_EXITED = 4,
   PROCESS_STATE_BACKOFF = 5,
+  PROCESS_STATE_NEW = 6,
 };
 
 enum program_options {
@@ -140,7 +143,7 @@ void pn_proc_exited(process_t *process, int status);
 
 int pn_prog_running(program_t *program);
 
-int pn_prog_proc_start(process_t *process);
+int pn_proc_start(process_t *process);
 
 int pn_prog_wait(program_t *program);
 int pn_prog_proc_wait(program_t *program, int instance);
@@ -149,6 +152,8 @@ int pn_prog_proc_running(program_t *program, int instance);
 pid_t pn_proc_pid(process_t *process);
 int pn_proc_wait(process_t *process);
 int pn_proc_running(process_t *process);
+
+int pn_proc_init(process_t *process, program_t *program, int instance);
 
 program_t *pn_proc_program(process_t *process);
 
@@ -159,11 +164,11 @@ program_t *pn_proc_program(process_t *process);
  *   iteration
  * @param block - a block of code.
  */
-#define pn_prog_proc_each(program, varname, block) \
+#define pn_prog_proc_each(program, iname, varname, block) \
 { \
-  int i = 0; \
-  for (i = 0; i < (program)->nprocs; i++) { \
-    process_t *varname = &(program)->processes[i]; \
+  int iname = 0; \
+  for (iname = 0; iname < (program)->nprocs; iname++) { \
+    process_t *varname = &(program)->processes[iname]; \
     { \
       block \
     } \

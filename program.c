@@ -4,6 +4,8 @@
 #include <sys/types.h>
 #include <sys/wait.h> /* for waitpid, WIFSIGNALED, etc */
 
+/* TODO(sissel): make copies of name, args, command, and any other strings */
+
 #define check_size(size, type, name) \
   insist_return(size == sizeof(type), PN_OPTION_BAD_VALUE, \
                 name "is a " __STRING(type) " (size=%zd), got size %zd", \
@@ -25,8 +27,18 @@ void pn_prog_init(program_t *program) {
   program->ionice = 0;
 
   program->processes = calloc(program->nprocs, sizeof(process_t));
+  pn_prog_proc_each(program, i, process, {
+    pn_proc_init(process, program, i);
+  });
 
   program->is_running = 0;
+}
+
+void pn_prog_destroy(program_t *program, int options) {
+  /* TODO(sissel): kill all processes
+   * wait until they are all dead
+   * then free any resources (program->processes, etc) 
+   */
 }
 
 int pn_prog_set(program_t *program, int option_name, const void *option_value,
@@ -67,6 +79,9 @@ int pn_prog_set(program_t *program, int option_name, const void *option_value,
                     "instances, stop the program first.", program->name);
       program->nprocs = *(int *)option_value;
       program->processes = calloc(program->nprocs, sizeof(process_t));
+      pn_prog_proc_each(program, i, process, {
+        pn_proc_init(process, program, i);
+      });
       break;
     case PROGRAM_UID:
       check_size(option_len, uid_t, "PROGRAM_UID");
@@ -154,25 +169,32 @@ int pn_prog_get(program_t *program, int option_name, void *option_value,
 } /* int pn_prog_get */
 
 int pn_prog_start(program_t *program) {
-  int i = 0;
-
   program->is_running = PN_TRUE;
+
   /* TODO(sissel): This should use pn_prog_proc_each */
-  for (i = 0; i < program->nprocs; i++) {
-    _pn_prog_spawn(program, i);
-  }
+  pn_prog_proc_each(program, i,  process, {
+    pn_proc_start(process);
+  });
 
   return PN_OK;
 }
 
-int _pn_prog_spawn(program_t *program, int instance) {
-  process_t *process;
-  process = &program->processes[instance];
+int pn_proc_init(process_t *process, program_t *program, int instance) {
+  memset(process, 0, sizeof(process_t));
   process->program = program;
+  process->instance = instance;
+}
+
+int pn_proc_start(process_t *process) {
+  const program_t *program;
+  program = pn_proc_program(process);
 
   /* set start clock */
   clock_gettime(CLOCK_REALTIME, &process->start_time);
   process->state = PROCESS_STATE_STARTING;
+
+  //printf("command: %s\n", program->command);
+  //printf("args: %s %s %s\n", program->args[0], program->args[1], program->args[2]);
 
   process->pid = fork();
   if (process->pid == 0) {
@@ -181,6 +203,14 @@ int _pn_prog_spawn(program_t *program, int instance) {
     args[0] = program->command;
     memcpy(args + 1, program->args, program->args_len * sizeof(char *));
     args[program->args_len + 2] = NULL;
+
+    /* TODO(sissel): setrlimit
+     * TODO(sissel): close fds
+     * TODO(sissel): set nice
+     * TODO(sissel): set ionice
+     * TODO(sissel): setuid
+     * TODO(sissel): setgid
+     */
     ret = execvp(program->command, args);
     /* if we get here, something went wrong.
      * Maybe send a message that execvp failed using zeromq? */
@@ -229,11 +259,10 @@ int pn_proc_wait(process_t *process) {
 
 
 void pn_prog_print(FILE *fp, program_t *program) {
-  int i = 0;
   fprintf(fp, "Program: %s (%d instance%s)\n", program->name, program->nprocs,
           program->nprocs == 1 ? "" : "s");
   
-  pn_prog_proc_each(program, process, {
+  pn_prog_proc_each(program, i, process, {
     pn_proc_print(fp, process, i, 2);
   });
 } /* int pn_prog_print */

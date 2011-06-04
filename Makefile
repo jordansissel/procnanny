@@ -1,4 +1,4 @@
-
+CFLAGS+=-g
 default: procnanny
 
 clean:
