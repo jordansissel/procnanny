@@ -19,7 +19,7 @@ int main() {
   pn_prog_set(&program, PROGRAM_NUMPROCS, &val, sizeof(int));
 
   const char *command = "/bin/bash";
-  const char *args[] = { "-c", "echo hello world; [ $(($RANDOM % 3)) -eq 0 ] && kill -INT $$; exit $(($RANDOM % 10))", NULL };
+  const char *args[] = { "-c", "sleep $((3 + $RANDOM % 5)); echo 'Hello world'; [ $(($RANDOM % 3)) -eq 0 ] && kill -INT $$; exit $(($RANDOM % 10))", NULL };
 
   pn_prog_set(&program, PROGRAM_COMMAND, command, strlen(command));
   pn_prog_set(&program, PROGRAM_ARGS, args, 3);

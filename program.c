@@ -180,24 +180,28 @@ int _pn_prog_spawn(program_t *program, int instance) {
 int pn_prog_wait(program_t *program) {
   int i = 0;
   for (i = 0; i < program->nprocs; i++) {
-    struct process *process = &program->processes[i];
-    if (pn_prog_proc_running(program, i)) {
-      int status = 0;
-      int rc = 0;
-      rc = waitpid(process->pid, &status, 0);
-      if (rc >= 0) {
-        process->state = PROCESS_STATE_EXITED;
-        if (WIFSIGNALED(status)) {
-          process->exit_status = -1;
-          process->exit_signal = WTERMSIG(status);
-        } else {
-          process->exit_status = WEXITSTATUS(status);
-          process->exit_signal = 0;
-        }
-      } /* if rc >= 0 */
-    } /* if process is running */
+    pn_prog_proc_wait(program, i);
   } /* for each process */
 } /* int pn_prog_wait */
+
+int pn_prog_proc_wait(program_t *program, int instance) {
+  if (pn_prog_proc_running(program, instance)) {
+    struct process *process = &program->processes[instance];
+    int status = 0;
+    int rc = 0;
+    rc = waitpid(process->pid, &status, 0);
+    if (rc >= 0) {
+      process->state = PROCESS_STATE_EXITED;
+      if (WIFSIGNALED(status)) {
+        process->exit_status = -1;
+        process->exit_signal = WTERMSIG(status);
+      } else {
+        process->exit_status = WEXITSTATUS(status);
+        process->exit_signal = 0;
+      }
+    } /* if rc >= 0 */
+  } /* if process is running */
+} /* pn_prog_proc_wait */
 
 int pn_prog_print(FILE *fp, program_t *program) {
   int i = 0;
