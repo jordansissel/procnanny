@@ -1,8 +1,6 @@
 #ifndef _PN_PROGRAM_H_
 #define _PN_PROGRAM_H_
 
-/* TODO(sissel): put the 'process_t' and pn_proc* methods in process.h */
-
 /** TODO(sissel): Maybe track 'health' states? */
 
 #include <unistd.h> /* for pid_t */
@@ -12,25 +10,11 @@
 #include <stdio.h> /* for FILE */
 
 struct program;
+typedef struct program program_t;
 
-struct process {
-  pid_t pid; /** the pid of the process */
-  int admin_state; /** the administrative state, up or down, etc */
-  int state; /** current running state */
+#include "process.h"
 
-  int exit_status;
-  int exit_signal;
-  struct timespec start_time;
-  struct timespec end_time;
-
-  /* pointer to parent program */
-  struct program *program;
-  /* the instance (program->processes[instance] etc) */
-  int instance;
-
-  /* arbitrary data you can assign to this process */
-  void *data;
-};
+struct process;
 
 struct program {
   char *name; /** the name of the program */
@@ -118,9 +102,6 @@ struct ulimit {
   int resource;
 };
 
-typedef struct program program_t;
-typedef struct process process_t;
-
 void pn_prog_init(program_t *program);
 
 /**
@@ -133,31 +114,11 @@ int pn_prog_get(program_t *program, int option_name, void *option_value,
 
 int pn_prog_start(program_t *program);
 void pn_prog_print(FILE *fp, program_t *program);
-
-void pn_proc_print(FILE *fp, process_t *process, int procnum, int indent);
-
-
-/** This is a way for external tools, like libev, to be used
- * and still notify a program of a pid exit.
- */
-//int pn_prog_proc_exited(program_t *program, pid_t pid, int status);
-void pn_proc_exited(process_t *process, int status);
-
 int pn_prog_running(program_t *program);
-
-int pn_proc_start(process_t *process);
 
 int pn_prog_wait(program_t *program);
 int pn_prog_proc_wait(program_t *program, int instance);
 int pn_prog_proc_running(program_t *program, int instance);
-
-pid_t pn_proc_pid(process_t *process);
-int pn_proc_wait(process_t *process);
-int pn_proc_running(process_t *process);
-
-int pn_proc_init(process_t *process, program_t *program, int instance);
-
-program_t *pn_proc_program(process_t *process);
 
 /** Iterate over processes for this program.
  *
