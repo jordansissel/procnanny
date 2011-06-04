@@ -10,6 +10,7 @@ int pn_proc_init(process_t *process, program_t *program, int instance) {
   memset(process, 0, sizeof(process_t));
   process->program = program;
   process->instance = instance;
+  return PN_OK;
 } /* int pn_proc_init */
 
 int pn_proc_start(process_t *process) {
