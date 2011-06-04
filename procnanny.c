@@ -9,12 +9,17 @@ int main() {
   program_t program;
   pn_prog_init(&program);
 
-  int val = 3;
+  int val;
   pn_prog_set(&program, PROGRAM_NAME, "Hello world", sizeof(char *));
+
+  val = 3;
   pn_prog_set(&program, PROGRAM_NICE, &val, sizeof(int));
 
-  const char *command = "/bin/sh";
-  const char *args[] = { "-c", "echo hello world", NULL };
+  val = 4;
+  pn_prog_set(&program, PROGRAM_NUMPROCS, &val, sizeof(int));
+
+  const char *command = "/bin/bash";
+  const char *args[] = { "-c", "echo hello world; [ $(($RANDOM % 3)) -eq 0 ] && kill -INT $$; exit $(($RANDOM % 10))", NULL };
 
   pn_prog_set(&program, PROGRAM_COMMAND, command, strlen(command));
   pn_prog_set(&program, PROGRAM_ARGS, args, 3);
@@ -22,8 +27,9 @@ int main() {
   pn_prog_start(&program);
 
   int status;
+
+  pn_prog_wait(&program);
   pn_prog_print(stdout, &program);
-  waitpid(0, &status, 0);
 
   return 0;
 }

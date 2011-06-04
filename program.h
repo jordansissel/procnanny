@@ -15,6 +15,7 @@ struct process {
   int state; /** current running state */
 
   int exit_status;
+  int exit_signal;
   struct timespec start_time;
   struct timespec end_time;
 };
@@ -110,5 +111,7 @@ int pn_prog_get(program_t *program, int option_name, void *option_value,
 
 int pn_prog_start(program_t *program);
 int pn_prog_print(FILE *fp, program_t *program);
+
+int pn_prog_proc_running(program_t *program, int instance);
 
 #endif /* _PN_PROGRAM_H_ */

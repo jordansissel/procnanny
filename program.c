@@ -1,6 +1,8 @@
 #include "program.h"
 #include "insist.h"
 #include <string.h> /* for strlen and friends */
+#include <sys/types.h>
+#include <sys/wait.h> /* for waitpid, WIFSIGNALED, etc */
 
 #define check_size(size, type, name) \
   insist_return(size == sizeof(type), PN_OPTION_BAD_VALUE, \
@@ -23,6 +25,8 @@ void pn_prog_init(program_t *program) {
   program->ionice = 0;
 
   program->processes = calloc(program->nprocs, sizeof(struct process));
+
+  program->is_running = 0;
 }
 
 int pn_prog_set(program_t *program, int option_name, const void *option_value,
@@ -173,6 +177,28 @@ int _pn_prog_spawn(program_t *program, int instance) {
   }
 }
 
+int pn_prog_wait(program_t *program) {
+  int i = 0;
+  for (i = 0; i < program->nprocs; i++) {
+    struct process *process = &program->processes[i];
+    if (pn_prog_proc_running(program, i)) {
+      int status = 0;
+      int rc = 0;
+      rc = waitpid(process->pid, &status, 0);
+      if (rc >= 0) {
+        process->state = PROCESS_STATE_EXITED;
+        if (WIFSIGNALED(status)) {
+          process->exit_status = -1;
+          process->exit_signal = WTERMSIG(status);
+        } else {
+          process->exit_status = WEXITSTATUS(status);
+          process->exit_signal = 0;
+        }
+      } /* if rc >= 0 */
+    } /* if process is running */
+  } /* for each process */
+} /* int pn_prog_wait */
+
 int pn_prog_print(FILE *fp, program_t *program) {
   int i = 0;
   printf("Program: %s (%d instance%s)\n", program->name, program->nprocs,
@@ -180,6 +206,18 @@ int pn_prog_print(FILE *fp, program_t *program) {
   
   for (i = 0; i < program->nprocs; i++) {
     struct process *process = &program->processes[i];
-    printf("  %d: pid:%d exitcode:%d\n", i, process->pid, process->exit_status);
+    if (process->exit_signal) {
+      printf("  %d: pid:%d exitsignal:%d\n", i, process->pid, process->exit_signal);
+    } else {
+      printf("  %d: pid:%d exitcode:%d\n", i, process->pid, process->exit_status);
+    }
   }
+  return 0;
+} /* int pn_prog_print */
+
+int pn_prog_proc_running(program_t *program, int instance) {
+  struct process *process = &program->processes[instance];
+  return process->state != PROCESS_STATE_EXITED \
+         && process->state != PROCESS_STATE_BACKOFF;
 }
+
