@@ -31,20 +31,39 @@ int obj_get(const msgpack_object *obj, const char *name,
       case MSGPACK_OBJECT_RAW:
         *(const char **)value = curvalue->via.raw.ptr;
         *value_len = curvalue->via.raw.size;
-        printf("request: (type=%d, size=%zd) %.*s\n", curvalue->type,
-               *value_len, (int)*value_len, *(char **)value);
+        //printf("request: (type=%d, size=%zd) %.*s\n", curvalue->type,
+               //*value_len, (int)*value_len, *(char **)value);
         break;
       case MSGPACK_OBJECT_DOUBLE:
         *(double *)value = curvalue->via.dec;
-        *value_len = sizeof(double);
-        printf("request: (type=%d, size=%zd) %lf\n", curvalue->type, *value_len,
-               *(double *)value);
+        if (value_len != NULL) {
+          *value_len = sizeof(double);
+        }
+        //printf("request: (type=%d, size=%zd) %lf\n", curvalue->type, *value_len,
+               //*(double *)value);
+        break;
+      case MSGPACK_OBJECT_POSITIVE_INTEGER:
+        *(uint64_t *)value = curvalue->via.u64;
+        if (value_len != NULL) {
+          *value_len = sizeof(uint64_t);
+        }
+        printf("request: (type=%d) %lu\n", curvalue->type, *(uint64_t *)value);
+        break;
+      case MSGPACK_OBJECT_NEGATIVE_INTEGER:
+        *(int64_t *)value = curvalue->via.i64;
+        if (value_len != NULL) {
+          *value_len = sizeof(int64_t);
+        }
+        printf("request: (type=%d) %ld\n", curvalue->type, *(int64_t *)value);
         break;
       case MSGPACK_OBJECT_BOOLEAN:
         *(bool *)value = curvalue->via.boolean;
-        *value_len = sizeof(bool);
-        printf("request: (type=%d, size=%zd) %s\n", curvalue->type, *value_len,
-               *(bool *)value ? "true" : "false");
+        if (value_len != NULL) {
+          *value_len = sizeof(bool);
+        }
+        //printf("request: (type=%d, size=%zd) %s\n", curvalue->type, *value_len,
+               //*(bool *)value ? "true" : "false");
+        break;
       default:
         fprintf(stderr, "Unsupported type %d.\n", curvalue->type);
         break;
