@@ -87,12 +87,16 @@ int pn_prog_set(program_t *program, int option_name, const void *option_value,
       check_size(option_len, uid_t, "PROGRAM_UID");
       program->uid = *(uid_t *)option_value;
       break;
-    case PROGRAM_USER: break;
-    case PROGRAM_GID: break;
+    case PROGRAM_USER:
+      pn_util_uid((char *)option_value, &program->uid);
+      break;
+    case PROGRAM_GID:
       check_size(option_len, gid_t, "PROGRAM_GID");
       program->uid = *(uid_t *)option_value;
       break;
-    case PROGRAM_GROUP: break;
+    case PROGRAM_GROUP:
+      pn_util_gid((char *)option_value, &program->gid);
+      break;
     case PROGRAM_NICE:
       check_size(option_len, int, "PROGRAM_NICE");
       program->nice = *(int *)option_value;
@@ -141,7 +145,7 @@ int pn_prog_get(program_t *program, int option_name, void *option_value,
     case PROGRAM_USER:
       fprintf(stderr, "PROGRAM_USER not supported yet\n");
       break;
-    case PROGRAM_GID: break;
+    case PROGRAM_GID:
       *(gid_t *)option_value = program->gid;
       *option_len = sizeof(program->gid);
       break;

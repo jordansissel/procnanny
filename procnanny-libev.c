@@ -5,8 +5,11 @@
 
 #include "program.h"
 #include "process.h"
+#include "procnanny.h"
+#include "pn_api.h"
 
 void start(program_t *program);
+void api_cb(EV_P_ ev_io *watcher, int revents);
 void child_cb(EV_P_ ev_child *watcher, int revents);
 void new_child_timer(process_t *process, double delay);
 void child_timer_cb(EV_P_ ev_timer *watcher, int revents);
@@ -49,23 +52,29 @@ void child_cb(EV_P_ ev_child *watcher, int revents) {
 } /* child_cb */
 
 int main() {
-  program_t program;
+  program_t *program;
   struct ev_loop *loop = EV_DEFAULT;
 
+  procnanny_t pn;
+  pn.loop = loop;
+  pn.programs_len = 1;
+  pn.programs = calloc(pn.programs_len, sizeof(program_t));;
+
+  program = &pn.programs[0];
+  program->data = loop;
+  start(program);
+  printf("loop: %x\n", pn.loop);
+  start_api(&pn);
+
   ev_child *pidwatcher;
-
-  program.data = loop;
-
-  start(&program);
-
-  pn_prog_proc_each(&program, i, process, {
+  pn_prog_proc_each(program, i, process, {
     pidwatcher = calloc(1, sizeof(ev_child));
     ev_child_init(pidwatcher, child_cb, pn_proc_pid(process), 0);
     ev_child_start(loop, pidwatcher);
     pidwatcher->data = process;
   });
 
-  pn_prog_print(stdout, &program);
+  pn_prog_print(stdout, &pn.programs[0]);
 
   ev_run(loop, 0);
 
@@ -76,7 +85,8 @@ void start(program_t *program) {
   pn_prog_init(program);
 
   int nprocs = 1;
-  pn_prog_set(program, PROGRAM_NAME, "hello world", sizeof(char *));
+  pn_prog_set(program, PROGRAM_NAME, "hello world", 12);
+  pn_prog_set(program, PROGRAM_USER, "jls", -1);
   pn_prog_set(program, PROGRAM_NUMPROCS, &nprocs, sizeof(int));
 
   const char *command = "/bin/bash";
@@ -90,3 +100,4 @@ void start(program_t *program) {
   pn_prog_set(program, PROGRAM_ARGS, args, 3);
   pn_prog_start(program);
 } /* start */
+

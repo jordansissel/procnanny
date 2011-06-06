@@ -30,7 +30,7 @@ int pn_proc_start(process_t *process) {
     int ret = 0;
     args[0] = program->command;
     memcpy(args + 1, program->args, program->args_len * sizeof(char *));
-    args[program->args_len + 2] = NULL;
+    args[program->args_len + 1] = NULL;
 
     /* TODO(sissel): setrlimit
      * TODO(sissel): close fds
