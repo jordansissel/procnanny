@@ -4,13 +4,14 @@
 #include <ev.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fcntl.h>
 #include <msgpack.h>
 
 void api_cb(EV_P_ ev_io *watcher, int revents);
+
+void api_request_dance(msgpack_object *request, struct sockaddr *addr, socklen_t addrlen);
 
 void start_api(procnanny_t *pn) {
   int fd;
@@ -44,11 +45,13 @@ void api_cb(EV_P_ ev_io *watcher, int revents) {
 
   while (1) {
     size_t off = 0;
-    int bytes;
+    ssize_t bytes;
     int ret = 0;
-    msgpack_object *obj;
+    msgpack_object *request;
+    struct sockaddr addr;
+    socklen_t addrlen;
 
-    bytes = read(watcher->fd, buf, 8192);
+    bytes = recvfrom(watcher->fd, buf, 8192, 0, &addr, &addrlen); 
     if (bytes <= 0) {
       break;
     }
@@ -63,24 +66,26 @@ void api_cb(EV_P_ ev_io *watcher, int revents) {
       break;
     }
 
-    obj = (msgpack_object*)&msg.data;
+    request = (msgpack_object*)&msg.data;
 
-    if (obj->type != MSGPACK_OBJECT_MAP) {
+    if (request->type != MSGPACK_OBJECT_MAP) {
       printf("invalid message type %d, expected MSGPACK_OBJECT_MAP(%d)\n", 
-             obj->type, MSGPACK_OBJECT_MAP);
+             request->type, MSGPACK_OBJECT_MAP);
       break;
     }
 
-    /* find the key 'request', then fire off that api request */
-    int i = 0;
-    for (i = 0; i < obj->via.map.size; i++) {
-      msgpack_object_kv *kv = obj->via.map.ptr;
-      msgpack_object *key = (msgpack_object *)&(obj->via.map.ptr[i].key);
-      if (!strncmp("request", key->via.raw.ptr, key->via.raw.size)) {
-        msgpack_object *value = (msgpack_object *)&(obj->via.map.ptr[i].val);
-        printf("request: (type=%d, size=%d) %.*s\n", value->type,
-               value->via.raw.size, value->via.raw.size, value->via.raw.ptr);
-        /* TODO(sissel): Look up the request in a dispatch tables */
+    char *method;
+    size_t method_len;
+    ret = obj_get(request, "request", MSGPACK_OBJECT_RAW, &method, &method_len);
+    if (ret != 0) {
+      fprintf(stderr, "Message had no 'request' field. Ignoring: ");
+      msgpack_object_print(stderr, *request);
+    } else {
+      /* Found request */
+      printf("The method is: '%.*s'\n", (int)method_len, method);
+
+      if (!strncmp("dance", method, method_len)) {
+        api_request_dance(request, &addr, addrlen);
       }
     }
     msgpack_unpacked_destroy(&msg);
@@ -88,4 +93,16 @@ void api_cb(EV_P_ ev_io *watcher, int revents) {
 
   msgpack_unpacked_destroy(&msg);
   msgpack_sbuffer_free(sbuf);
+} /* api_cb */
+
+void api_request_dance(msgpack_object *request, struct sockaddr *addr, socklen_t addrlen) {
+  switch (addrlen) {
+    case sizeof(struct sockaddr_in):
+      printf("Client: %s\n", inet_ntoa(((struct sockaddr_in *)addr)->sin_addr));
+      break;
+    default:
+      printf("Unknown addrlen: %d\n", addrlen);
+  }
+
+  printf("Dance dance dance. La la la.\n");
 }

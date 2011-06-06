@@ -3,6 +3,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <stdio.h>
+#include <string.h>
 
 int pn_util_uid(char *username, uid_t *uid) {
   int ret;
