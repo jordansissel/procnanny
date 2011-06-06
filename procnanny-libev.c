@@ -46,7 +46,7 @@ void child_cb(EV_P_ ev_child *watcher, int revents) {
          pn_proc_pid(process));
   pn_proc_print(stdout, process, 0, 0);
 
-  restart_child(process, 3.0);
+  restart_child(process, 2.0);
   /* We allocate a new watcher for each pid, and this one is done. */
   free(watcher);
 } /* child_cb */
@@ -84,17 +84,19 @@ int main() {
 void start(program_t *program) {
   pn_prog_init(program);
 
-  int nprocs = 1;
+  int nprocs = 20;
   pn_prog_set(program, PROGRAM_NAME, "hello world", 12);
   pn_prog_set(program, PROGRAM_USER, "jls", -1);
   pn_prog_set(program, PROGRAM_NUMPROCS, &nprocs, sizeof(int));
 
-  const char *command = "/bin/bash";
+  //const char *command = "/bin/bash";
+  const char *command = "/usr/bin/env";
   const char **args = calloc(3, sizeof(char *));
 
-  args[0] = "-c";
-  args[1] = "echo 'Hello world'; [ $(($RANDOM % 3)) -eq 0 ] && kill -INT $$; exit $(($RANDOM % 10))";
-  args[2] = NULL;
+  args[0] = "ruby";
+  args[1] = "-e";
+  //args[1] = "sleep 20; echo 'Hello world'; [ $(($RANDOM % 3)) -eq 0 ] && kill -INT $$; exit $(($RANDOM % 10))";
+  args[2] = "sleep(rand * 10); puts :OK";
 
   pn_prog_set(program, PROGRAM_COMMAND, command, strlen(command));
   pn_prog_set(program, PROGRAM_ARGS, args, 3);

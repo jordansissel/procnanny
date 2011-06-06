@@ -69,4 +69,9 @@ int pn_proc_init(process_t *process, program_t *program, int instance);
  */
 program_t *pn_proc_program(process_t *process);
 
+/**
+ * Send a signal to a process
+ */
+int pn_proc_signal(process_t *process, int signal);
+
 #endif /* _PROCESS_H_ */

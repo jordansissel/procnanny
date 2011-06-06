@@ -68,9 +68,9 @@ int pn_prog_set(program_t *program, int option_name, const void *option_value,
     case PROGRAM_ARGS:
       program->args = (char **) option_value;
       program->args_len = option_len;
-      insist_return(program->args[option_len - 1] == NULL, PN_OPTION_BAD_VALUE,
-                    "PROGRAM_ARGS array must have last element as NULL. Got: '%s'",
-                    program->args[option_len - 1]);
+      //insist_return(program->args[option_len - 1] == NULL, PN_OPTION_BAD_VALUE,
+                    //"PROGRAM_ARGS array must have last element as NULL. Got: '%s'",
+                    //program->args[option_len - 1]);
       break;
     case PROGRAM_NUMPROCS:
       check_size(option_len, int, "PROGRAM_NUMPROCS");
@@ -241,3 +241,8 @@ int pn_prog_running(program_t *program) {
   return program->is_running;
 }
 
+int pn_prog_signal(program_t *program, int signal) {
+  pn_prog_proc_each(program, i, process, {
+    pn_proc_signal(process, signal);
+  });
+}

@@ -95,6 +95,8 @@ enum pn_return_codes {
   PN_OPTION_INVALID = 2,
   PN_OPTION_BAD_VALUE = 3,
   PN_BAD_REQUEST = 4,
+  PN_PROCESS_NOT_RUNNING = 5,
+  PN_PROGRAM_NOT_RUNNING = 6,
 };
 
 struct ulimit {
@@ -119,6 +121,7 @@ int pn_prog_running(program_t *program);
 int pn_prog_wait(program_t *program);
 int pn_prog_proc_wait(program_t *program, int instance);
 int pn_prog_proc_running(program_t *program, int instance);
+int pn_prog_signal(program_t *program, int signal);
 
 /** Iterate over processes for this program.
  *

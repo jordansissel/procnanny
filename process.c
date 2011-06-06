@@ -1,6 +1,7 @@
 #include "process.h"
 #include "program.h"
 
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -21,6 +22,8 @@ int pn_proc_start(process_t *process) {
   clock_gettime(CLOCK_REALTIME, &process->start_time);
   process->state = PROCESS_STATE_STARTING;
 
+  printf("Starting '%.*s'[%d]: %s ...\n", (int)program->name_len, program->name,
+         process->instance, program->command);
   //printf("command: %s\n", program->command);
   //printf("args: %s %s %s\n", program->args[0], program->args[1], program->args[2]);
 
@@ -92,3 +95,16 @@ void pn_proc_exited(process_t *process, int status) {
     process->exit_signal = 0;
   }
 } /* void pn_proc_exited */
+
+int pn_proc_signal(process_t *process, int signal) {
+  if (process->pid > 0) {
+    int ret = kill(process->pid, signal);
+    if (ret == 0) {
+      return PN_OK;
+    }
+    perror("KILL FAILED");
+    return PN_PROCESS_NOT_RUNNING;
+  }
+
+  return PN_PROCESS_NOT_RUNNING;
+}

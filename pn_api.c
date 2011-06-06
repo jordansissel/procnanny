@@ -218,7 +218,7 @@ void api_request_restart(procnanny_t *pn, msgpack_object *request,
         printf("instance >= 0 not supported yet: %ld \n", instance);
       } else {
         pn_prog_proc_each(program, i, process, {
-          ret = pn_proc_kill(process, SIGTERM);
+          ret = pn_proc_signal(process, SIGTERM);
           printf("kill[%d] => %d\n", i, ret);
           msgpack_pack_int(packer, i);
 
