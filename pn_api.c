@@ -207,7 +207,7 @@ void api_request_restart(procnanny_t *pn, msgpack_object *request,
          program_name, instance);
 
   msgpack_pack_map(packer, 1);
-  msgpack_pack_string(packer, "signal-results", 4);
+  msgpack_pack_string(packer, "signal-results", 14);
 
   pn_prog_each(pn, i, program, {
     if (!strncmp(program->name, program_name, program_len)) {
