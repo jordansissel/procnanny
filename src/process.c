@@ -1,7 +1,10 @@
 #include "process.h"
 #include "program.h"
+#include "insist.h"
+#include "stringhelper.h"
 
 #include <signal.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -30,19 +33,50 @@ int pn_proc_start(process_t *process) {
   process->pid = fork();
   if (process->pid == 0) {
     char **args = calloc(program->args_len + 2, sizeof(char *));
-    int ret = 0;
+    int rc = 0;
+    int i = 0;
     args[0] = program->command;
+
+    /* TODO(sissel): Replace things in the args:
+     *   %i - instance number
+     *   %p - pid
+     *   %u - uid
+     *   %g - gid
+     *
+     * Anything else?
+     */
     memcpy(args + 1, program->args, program->args_len * sizeof(char *));
     args[program->args_len + 1] = NULL;
 
     /* TODO(sissel): setrlimit
-     * TODO(sissel): close fds
-     * TODO(sissel): set nice
+     * TODO(sissel): close fds ?
      * TODO(sissel): set ionice
-     * TODO(sissel): setuid
-     * TODO(sissel): setgid
      */
-    ret = execvp(program->command, args);
+
+    /* setgid if necessary */
+    if (program->gid != getgid()) {
+      /* setgid requested */
+      rc = setgid(program->gid);
+      insist(rc == 0, "setgid(%ld) failed. errno: %d: %s", program->gid,
+             errno, strerror(errno));
+    }
+
+    /* setuid if necessary */
+    if (program->uid != getuid()) {
+      /* setuid requested */
+      rc = setuid(program->uid);
+      insist(rc == 0, "setuid(%ld) failed. errno: %d: %s", program->uid,
+             errno, strerror(errno));
+    }
+
+    /* set nice if necessary */
+    if (program->nice != 0) {
+      rc = nice(program->nice);
+      insist(rc != -1, "nice(%d) failed. errno: %d: %s", program->nice, errno,
+             strerror(errno));
+    }
+
+    rc = execvp(program->command, args);
     /* if we get here, something went wrong.
      * Maybe send a message that execvp failed using zeromq? */
     exit(255);
@@ -98,8 +132,8 @@ void pn_proc_exited(process_t *process, int status) {
 
 int pn_proc_signal(process_t *process, int signal) {
   if (process->pid > 0) {
-    int ret = kill(process->pid, signal);
-    if (ret == 0) {
+    int rc = kill(process->pid, signal);
+    if (rc == 0) {
       return PN_OK;
     }
     perror("KILL FAILED");
