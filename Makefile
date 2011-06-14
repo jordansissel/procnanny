@@ -2,11 +2,14 @@ CFLAGS?=-g
 
 MSGPACK?=/opt/msgpack/0.5.5
 LIBEV?=/opt/libev/4.04
+ZEROMQ?=/opt/zeromq/2.1.7/
 
 CFLAGS+=-I$(MSGPACK)/include -I/usr/local/include
 LDFLAGS+=-L$(MSGPACK)/lib -L/usr/local/lib
 CFLAGS+=-I$(LIBEV)/include -I/usr/local/include
 LDFLAGS+=-L$(LIBEV)/lib -L/usr/local/lib
+CFLAGS+=-I$(ZEROMQ)/include -I/usr/local/include
+LDFLAGS+=-L$(ZEROMQ)/lib -L/usr/local/lib
 
 QUIET?=@
 
@@ -38,7 +41,9 @@ build:
 .PHONY: compile
 compile: $(OBJECTS)
 
-procnanny: LDFLAGS+=-lrt -lev -lmsgpack -Xlinker -rpath=$(MSGPACK)/lib -Xlinker -rpath=$(LIBEV)/lib
+procnanny: LDFLAGS+=-lrt -lev -lmsgpack -lzmq
+procnanny: LDFLAGS+=-Xlinker -rpath=$(MSGPACK)/lib -Xlinker -rpath=$(LIBEV)/lib
+procnanny: LDFLAGS+=-Xlinker -rpath=$(ZEROMQ)/lib
 procnanny: $(OBJECTS)
 	@echo "Linking $@"
 	$(QUIET)$(CC) -o $@ $(LDFLAGS) $^
