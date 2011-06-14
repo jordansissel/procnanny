@@ -84,7 +84,7 @@ int main() {
 void start(program_t *program) {
   pn_prog_init(program);
 
-  int nprocs = 20;
+  int nprocs = 1;
   pn_prog_set(program, PROGRAM_NAME, "hello world", 12);
   pn_prog_set(program, PROGRAM_USER, "jls", -1);
   pn_prog_set(program, PROGRAM_NUMPROCS, &nprocs, sizeof(int));

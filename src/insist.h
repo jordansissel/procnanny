@@ -7,12 +7,13 @@
 /* Define "insist" that behaves like assert(), only much better. */
 #define insist(conditional, args...) \
   ( \
-    (conditional) ? (void)(0) : \
+    (conditional) ? (void)(0) : ( \
       fprintf(stderr, "Assertion failed %s:%d in %s(), insist(%s): ", \
               __FILE__, __LINE__, __PRETTY_FUNCTION__, __STRING(conditional)), \
       fprintf(stderr, ## args), \
       fprintf(stderr, "\n"), \
       abort() \
+    ) \
   )
 
 /* Define "insist_return" that behaves like insist() but returns instead of
