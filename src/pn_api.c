@@ -34,6 +34,8 @@ void api_request_dance(rpc_io *rpcio, msgpack_object *request,
                        msgpack_packer *packer);
 void api_request_restart(rpc_io *rpcio, msgpack_object *request,
                        msgpack_packer *packer);
+void api_request_status(rpc_io *rpcio, msgpack_object *request_obj,
+                        msgpack_packer *response_msg);
 
 void free_msgpack_buffer(void *data, void *hint);
 
@@ -119,8 +121,8 @@ void rpc_handle(rpc_io *rpcio, zmq_msg_t *request) {
     /* Found request */
     printf("The method is: '%.*s'\n", (int)method_len, method);
 
-    msgpack_pack_map(response_msg, 2);
-    msgpack_pack_string(response_msg, "results", 7);
+    //msgpack_pack_map(response_msg, 2);
+    //msgpack_pack_string(response_msg, "results", 7);
 
     void *clock = zmq_stopwatch_start();
     /* TODO(sissel): Use gperf here */
@@ -130,13 +132,21 @@ void rpc_handle(rpc_io *rpcio, zmq_msg_t *request) {
       api_request_restart(rpcio, &request_obj, response_msg);
     } else if (!strncmp("status", method, method_len)) {
       api_request_status(rpcio, &request_obj, response_msg);
+    } else {
+      fprintf(stderr, "Invalid request '%.*s' (unknown method): ", method_len, method);
+      msgpack_object_print(stderr, request_obj);
+      msgpack_pack_map(response_msg, 2);
+      msgpack_pack_string(response_msg, "error", -1);
+      msgpack_pack_string(response_msg, "No such method requested", -1);
+      msgpack_pack_string(response_msg, "request", -1);
+      msgpack_pack_object(response_msg, request_obj);
     }
     double duration = zmq_stopwatch_stop(clock) / 1000000.;
 
-    msgpack_pack_string(response_msg, "stats", 5);
-    msgpack_pack_map(response_msg, 1),
-    msgpack_pack_string(response_msg, "duration", 8);
-    msgpack_pack_double(response_msg, duration);
+    //msgpack_pack_string(response_msg, "stats", 5);
+    //msgpack_pack_map(response_msg, 1),
+    //msgpack_pack_string(response_msg, "duration", 8);
+    //msgpack_pack_double(response_msg, duration);
   }
 
   zmq_msg_init_data(&response, buffer->data, buffer->size, free_msgpack_buffer, buffer); 
