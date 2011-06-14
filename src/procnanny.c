@@ -97,6 +97,8 @@ void start(program_t *program) {
   args[1] = "-e";
   args[2] = "sleep(rand * 10); puts :OK";
 
+  program->nice = 5;
+
   pn_prog_set(program, PROGRAM_COMMAND, command, strlen(command));
   pn_prog_set(program, PROGRAM_ARGS, args, 3);
   pn_prog_start(program);
