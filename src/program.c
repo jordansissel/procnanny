@@ -20,8 +20,8 @@ void pn_prog_init(program_t *program) {
   program->args_len = 0;
   program->nprocs = 1;
   program->limits = NULL;
-  program->uid = -1;
-  program->gid = -1;
+  program->uid = getuid(); /* default uid to current user */
+  program->gid = getgid(); /* default gid to current user */
 
   program->nice = 0;
   program->ionice = 0;
@@ -92,7 +92,7 @@ int pn_prog_set(program_t *program, int option_name, const void *option_value,
       break;
     case PROGRAM_GID:
       check_size(option_len, gid_t, "PROGRAM_GID");
-      program->uid = *(uid_t *)option_value;
+      program->gid = *(gid_t *)option_value;
       break;
     case PROGRAM_GROUP:
       pn_util_gid((char *)option_value, &program->gid);
