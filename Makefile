@@ -1,37 +1,44 @@
-CFLAGS+=-g
+CFLAGS?=-g
+
+MSGPACK?=/opt/msgpack/0.5.5
+LIBEV?=/opt/libev/4.04
+
+CFLAGS+=-I$(MSGPACK)/include -I/usr/local/include
+LDFLAGS+=-L$(MSGPACK)/lib -L/usr/local/lib
+CFLAGS+=-I$(LIBEV)/include -I/usr/local/include
+LDFLAGS+=-L$(LIBEV)/lib -L/usr/local/lib
+
+QUIET?=@
+
+FILES=msgpack_helpers.c pn_api.c pn_util.c process.c procnanny.c program.c
+OBJECTS=$(addprefix build/, $(subst .c,.o,$(FILES)))
+
+VPATH=src
+all: default
 default: procnanny
 
 clean:
-	rm -f *.o procnanny procnanny-libev
+	rm -f $(OBJECTS)
+	rm -r build/
 
-%.c: Makefile
-%.h: Makefile
-
+%.c %.h: Makefile
 program.c: program.h process.h
 process.c: program.h process.h
 pn_api.c: pn_api.h procnanny.h
 procnanny.c: procnanny.h
 msgpack_helpers.c: msgpack_helpers.h
 
-procnanny: LDFLAGS+=-lrt
-procnanny: procnanny.o program.o process.o
-	$(CC) $(LDFLAGS) -o $@ $^
+build/%.o: %.c build
+	@echo "Compiling $< ($@)"
+	$(QUIET)$(CC) $(CFLAGS) -c $< -o $@
 
-procnanny-libev.o: CFLAGS+=-I/usr/local/include
-pn_api: CFLAGS+=-I/usr/local/include
+build: 
+	@mkdir build
 
-procnanny-libev: LDFLAGS+=-L/usr/local/lib -lrt -lev -lmsgpack
-procnanny-libev: procnanny-libev.o program.o process.o pn_util.o pn_api.o
-procnanny-libev: msgpack_helpers.o
-	$(CC) -o $@ $(LDFLAGS) $^
+.PHONY: compile
+compile: $(OBJECTS)
 
-procnanny-libevzmq.o: CFLAGS+=-I/usr/local/include
-
-procnanny-libevzmq: LDFLAGS+=-L/usr/local/lib -lrt -lev -lzmq
-procnanny-libevzmq: procnanny-libevzmq.o program.o process.o
-	$(CC) -o $@ $(LDFLAGS) $^
-
-test.o: CFLAGS+=-I/usr/local/include
-test: LDFLAGS+=-L/usr/local/lib -lrt -lev -lmsgpack
-test: test.o
-	$(CC) -o $@ $(LDFLAGS) $^
+procnanny: LDFLAGS+=-lrt -lev -lmsgpack -Xlinker -rpath=$(MSGPACK)/lib -Xlinker -rpath=$(LIBEV)/lib
+procnanny: $(OBJECTS)
+	@echo "Linking $@"
+	$(QUIET)$(CC) -o $@ $(LDFLAGS) $^

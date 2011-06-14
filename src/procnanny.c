@@ -95,7 +95,6 @@ void start(program_t *program) {
 
   args[0] = "ruby";
   args[1] = "-e";
-  //args[1] = "sleep 20; echo 'Hello world'; [ $(($RANDOM % 3)) -eq 0 ] && kill -INT $$; exit $(($RANDOM % 10))";
   args[2] = "sleep(rand * 10); puts :OK";
 
   pn_prog_set(program, PROGRAM_COMMAND, command, strlen(command));
