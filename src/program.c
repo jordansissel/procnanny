@@ -32,14 +32,14 @@ void pn_prog_init(program_t *program) {
   });
 
   program->is_running = 0;
-}
+} /* void pn_proc_init */
 
 void pn_prog_destroy(program_t *program, int options) {
   /* TODO(sissel): kill all processes
    * wait until they are all dead
    * then free any resources (program->processes, etc) 
    */
-}
+} /* void pn_prog_destroy */
 
 int pn_prog_set(program_t *program, int option_name, const void *option_value,
                 size_t option_len) {
@@ -181,7 +181,7 @@ int pn_prog_start(program_t *program) {
   });
 
   return PN_OK;
-}
+} /* int pn_proc_start */
 
 int pn_prog_wait(program_t *program) {
   int i = 0;
@@ -217,12 +217,7 @@ int pn_prog_proc_running(program_t *program, int instance) {
   process_t *process = &program->processes[instance];
 
   return pn_proc_running(process);
-}
-
-int pn_proc_running(process_t *process) {
-  return process->state != PROCESS_STATE_EXITED \
-         && process->state != PROCESS_STATE_BACKOFF;
-}
+} /* int pn_prog_proc_running */
 
 pid_t pn_prog_proc_pid(program_t *program, int instance) {
   insist_return(pn_prog_running(program), PN_BAD_REQUEST,
@@ -235,7 +230,7 @@ pid_t pn_prog_proc_pid(program_t *program, int instance) {
   return pn_proc_pid(&program->processes[instance]);
 } /* int pn_prog_proc_pid */
 
-/* pn_prog_proc_each  is defined in program.h */
+/** pn_prog_proc_each  is defined in program.h */
 
 int pn_prog_running(program_t *program) {
   return program->is_running;

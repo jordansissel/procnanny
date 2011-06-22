@@ -24,6 +24,11 @@ struct process {
   /* the instance (program->processes[instance] etc) */
   int instance;
 
+  /* TODO(sissel): manage stdin/stdout/stderr */
+  int stdin;
+  int stdout;
+  int stderr;
+
   /* arbitrary data you can assign to this process */
   void *data;
 };
@@ -46,8 +51,12 @@ int pn_proc_start(process_t *process);
 /**
  * Get the pid of this process
  */
-
 pid_t pn_proc_pid(process_t *process);
+
+/**
+ * Get the instance number of this process.
+ */
+int pn_proc_instance(process_t *process);
 
 /**
  * Wait for this process to exit

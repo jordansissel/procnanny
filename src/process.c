@@ -8,6 +8,8 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h> /* for waitpid, WIFSIGNALED, etc */
+#include <unistd.h>
+#include <fcntl.h>
 
 int pn_proc_init(process_t *process, program_t *program, int instance) {
   memset(process, 0, sizeof(process_t));
@@ -18,6 +20,7 @@ int pn_proc_init(process_t *process, program_t *program, int instance) {
 
 int pn_proc_start(process_t *process) {
   const program_t *program;
+  int rc;
   program = pn_proc_program(process);
 
   /* set start clock */
@@ -29,12 +32,31 @@ int pn_proc_start(process_t *process) {
   //printf("command: %s\n", program->command);
   //printf("args: %s %s %s\n", program->args[0], program->args[1], program->args[2]);
 
+  int pipe_stdin[2];
+  int pipe_stdout[2];
+  int pipe_stderr[2];
+
+  /* TODO(sissel): error handling */
+  pipe(pipe_stdin); 
+  pipe(pipe_stdout);
+  pipe(pipe_stderr);
+
+  process->stdin = pipe_stdin[1];
+  process->stdout = pipe_stdout[0];
+  process->stderr = pipe_stderr[0];
+
   process->pid = fork();
   if (process->pid == 0) {
     char **args = calloc(program->args_len + 2, sizeof(char *));
-    int rc = 0;
     int i = 0;
     args[0] = program->command;
+
+    close(pipe_stdin[1]);
+    close(pipe_stdout[0]);
+    close(pipe_stderr[0]);
+    dup2(pipe_stdin[0], 0); /* redirect stdin */
+    dup2(pipe_stdout[1], 1); /* redirect stdout */
+    dup2(pipe_stdout[2], 2); /* redirect stderr */
 
     /* TODO(sissel): Replace things in the args:
      *   %i - instance number
@@ -81,6 +103,15 @@ int pn_proc_start(process_t *process) {
     exit(255);
   }
 
+  /* Close the child parts of the pipes */
+  close(pipe_stdin[0]);
+  close(pipe_stdout[1]);
+  close(pipe_stderr[1]);
+
+  /* set nonblock */
+  fcntl(process->stdout, F_SETFL, O_NONBLOCK);
+  fcntl(process->stderr, F_SETFL, O_NONBLOCK);
+
   return PN_OK;
 } /* int pn_proc_start */
 
@@ -114,6 +145,10 @@ pid_t pn_proc_pid(process_t *process) {
   return process->pid;
 } /* pid_t pn_proc_pid */
 
+int pn_proc_instance(process_t *process) {
+  return process->instance;
+} /* pid_t pn_proc_pid */
+
 program_t *pn_proc_program(process_t *process) {
   return process->program;
 } /* program_t *pn_proc_program */
@@ -141,3 +176,9 @@ int pn_proc_signal(process_t *process, int signal) {
 
   return PN_PROCESS_NOT_RUNNING;
 }
+
+int pn_proc_running(process_t *process) {
+  return process->state != PROCESS_STATE_EXITED \
+         && process->state != PROCESS_STATE_BACKOFF;
+} /* int pn_proc_running */
+
