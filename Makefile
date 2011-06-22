@@ -11,9 +11,12 @@ LDFLAGS+=-L$(LIBEV)/lib -L/usr/local/lib
 CFLAGS+=-I$(ZEROMQ)/include -I/usr/local/include
 LDFLAGS+=-L$(ZEROMQ)/lib -L/usr/local/lib
 
+CFLAGS+=-Isrc
+
 QUIET?=@
 
-FILES=msgpack_helpers.c pn_api.c pn_util.c process.c procnanny.c program.c
+FILES=msgpack_helpers.c pn_api.c pn_util.c process.c procnanny.c program.c \
+      api/restart.c api/status.c
 OBJECTS=$(addprefix build/, $(subst .c,.o,$(FILES)))
 
 VPATH=src
@@ -31,15 +34,17 @@ pn_api.c: pn_api.h procnanny.h
 procnanny.c: procnanny.h
 msgpack_helpers.c: msgpack_helpers.h
 
-build/%.o: %.c build
+build/%.o: %.c | build
 	@echo "Compiling $< ($@)"
+	$(QUIET)[ -d $(shell dirname $@) ] || mkdir $(shell dirname $@)
 	$(QUIET)$(CC) $(CFLAGS) -c $< -o $@
 
 build: 
 	@mkdir build
 
 .PHONY: compile
-compile: $(OBJECTS)
+compile: 
+	echo $(OBJECTS)
 
 procnanny: LDFLAGS+=-lrt -lev -lmsgpack -lzmq
 procnanny: LDFLAGS+=-Xlinker -rpath=$(MSGPACK)/lib -Xlinker -rpath=$(LIBEV)/lib

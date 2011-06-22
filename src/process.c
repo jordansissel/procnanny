@@ -1,7 +1,6 @@
 #include "process.h"
 #include "program.h"
 #include "insist.h"
-#include "stringhelper.h"
 
 #include <signal.h>
 #include <errno.h>
