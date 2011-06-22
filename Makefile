@@ -33,6 +33,7 @@ process.c: program.h process.h
 pn_api.c: pn_api.h procnanny.h
 procnanny.c: procnanny.h
 msgpack_helpers.c: msgpack_helpers.h
+api/%.c: api.h
 
 build/%.o: %.c | build
 	@echo "Compiling $< ($@)"
@@ -40,11 +41,7 @@ build/%.o: %.c | build
 	$(QUIET)$(CC) $(CFLAGS) -c $< -o $@
 
 build: 
-	@mkdir build
-
-.PHONY: compile
-compile: 
-	echo $(OBJECTS)
+	$(QUIET)mkdir build
 
 procnanny: LDFLAGS+=-lrt -lev -lmsgpack -lzmq
 procnanny: LDFLAGS+=-Xlinker -rpath=$(MSGPACK)/lib -Xlinker -rpath=$(LIBEV)/lib
