@@ -153,11 +153,10 @@ void free_msgpack_buffer(void *data, void *hint) {
 }
 
 void start_api(procnanny_t *pn) {
-  void *zmq = zmq_init(1);
   int rc;
   static char endpoint[] = "tcp://*:3333";
 
-  void *socket = zmq_socket(zmq, ZMQ_REP);
+  void *socket = zmq_socket(pn->zmq, ZMQ_REP);
   insist(socket != NULL, "zmq_socket returned NULL. Unexpected (%x).", socket);
 
   rc = zmq_bind(socket, endpoint);

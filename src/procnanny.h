@@ -8,6 +8,8 @@ struct procnanny {
   struct ev_loop *loop;
   struct program *programs;
   size_t programs_len;
+
+  void *zmq;
 }; 
 
 typedef struct procnanny procnanny_t;

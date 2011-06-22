@@ -2,10 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ev.h>
+#include <zmq.h>
+#include <zmq_utils.h>
 #include "program.h"
 #include "process.h"
 #include "procnanny.h"
 #include "pn_api.h"
+#include "insist.h"
 
 void start(program_t *program);
 void api_cb(EV_P_ ev_io *watcher, int revents);
@@ -13,7 +16,12 @@ void child_proc_cb(EV_P_ ev_child *watcher, int revents);
 void new_child_timer(process_t *process, double delay);
 void child_timer_cb(EV_P_ ev_timer *watcher, int revents);
 void child_io_cb(EV_P_ ev_io *watcher, int revents);
-void pn_proc_watch_io(struct ev_loop *loop, process_t *process);
+void pn_proc_watch_io(struct ev_loop *loop, process_t *process, void *zmqsocket);
+
+struct proc_io_channel {
+  ev_io **child_io;
+  void *zmqsocket;
+};
 
 void child_timer_cb(EV_P_ ev_timer *watcher, int revents) {
   ev_timer_stop(EV_A_ watcher);
@@ -29,6 +37,10 @@ void child_timer_cb(EV_P_ ev_timer *watcher, int revents) {
   free(watcher); /* was created by new_child_timer() */
 } /* child_timer_cb */
 
+void zfree(void *ptr, void *hint) {
+  free(ptr);
+} /* zfree */
+
 void child_io_cb(EV_P_ ev_io *watcher, int revents) {
   /* TODO(sissel): Make structure to carry IO for each process.
    * Should include:
@@ -38,8 +50,18 @@ void child_io_cb(EV_P_ ev_io *watcher, int revents) {
   char buf[4096];
   process_t *process = (process_t *)watcher->data;
   ssize_t bytes;
+  struct proc_io_channel *iochan = process->data;
 
+  /* TODO(sissel): formalize protocol for reads from a process.
+   * Should include: program name, process instance, data
+   */
   while ((bytes = read(watcher->fd, buf, 4096)) > 0) {
+    zmq_msg_t event;
+    int rc;
+    size_t msgsize;
+    rc = zmq_msg_init_data(&event, strndup(buf, bytes), bytes, zfree, NULL);
+    zmq_send(iochan->zmqsocket, &event, 0);
+    zmq_msg_close(&event);
     fprintf(stdout, "%s[%d]: (%d bytes) %.*s\n", pn_proc_program(process)->name,
             pn_proc_instance(process), bytes, bytes, buf);
   }
@@ -56,16 +78,18 @@ void restart_child(process_t *process, double delay) {
   ev_timer *timer;
   timer = calloc(1, sizeof(ev_timer));
   struct ev_loop *loop = pn_proc_program(process)->data;
+  struct proc_io_channel *iochan = process->data;
 
   timer->data = process;
   ev_timer_init(timer, child_timer_cb, delay, delay);
   ev_timer_start(loop, timer);
-  pn_proc_watch_io(loop, process);
+  pn_proc_watch_io(loop, process, iochan->zmqsocket);
 } /* restart_child */
 
 void child_proc_cb(EV_P_ ev_child *watcher, int revents) {
   ev_child_stop(EV_A_ watcher);
   process_t *process = watcher->data;
+  struct proc_io_channel *iochan = process->data;
 
   pn_proc_exited(process, watcher->rstatus);
   printf("process %s[%d] - ", pn_proc_program(process)->name, 
@@ -91,19 +115,26 @@ int main() {
   program->data = loop;
   start(program);
   printf("loop: %x\n", pn.loop);
+  pn.zmq = zmq_init(1);
   start_api(&pn);
+
+  void *logstream = zmq_socket(pn.zmq, ZMQ_PUB);
+  int rc;
+  const char *endpoint = "tcp://*:3344";
+  insist(logstream != NULL, "zmq_socket returned NULL. Unexpected (%x).", logstream);
+  rc = zmq_bind(logstream, endpoint);
+  insist(rc == 0, "zmq_bind(\"%s\") returned %d (I wanted 0).", endpoint, rc);
 
   ev_child *pidwatcher;
   pn_prog_proc_each(program, i, process, {
-
     pidwatcher = calloc(1, sizeof(ev_child));
     ev_child_init(pidwatcher, child_proc_cb, pn_proc_pid(process), 0);
     ev_child_start(loop, pidwatcher);
     pidwatcher->data = process;
     //process->data = child_io;
-    /* No need to free pidwatcher; we'll free it when the child dies in the clalback */
+    /* No need to free pidwatcher; we'll free it when the child dies in the callback */
 
-    pn_proc_watch_io(loop, process);
+    pn_proc_watch_io(loop, process, logstream);
   });
 
 
@@ -128,7 +159,9 @@ void start(program_t *program) {
 
   args[0] = "ruby";
   args[1] = "-e";
-  args[2] = "sleep(rand * 3); puts 'hello world!'";
+  args[2] = "sleep(rand * 3); puts Time.now;puts 'hello world'";
+  //args[0] = "curl";
+  //args[1] = "http://www.google.com/";
 
   program->nice = 5;
 
@@ -137,20 +170,23 @@ void start(program_t *program) {
   pn_prog_start(program);
 } /* start */
 
-void pn_proc_watch_io(struct ev_loop *loop, process_t *process) {
-  ev_io **child_io;
-  child_io = calloc(3, sizeof(ev_io*));
-  child_io[0] = calloc(1, sizeof(ev_io));
-  child_io[1] = calloc(1, sizeof(ev_io));
-  child_io[2] = calloc(1, sizeof(ev_io));
+void pn_proc_watch_io(struct ev_loop *loop, process_t *process, void *zmqsocket) {
+  struct proc_io_channel *iochan = calloc(1, sizeof(struct proc_io_channel));;
+  iochan->child_io = calloc(3, sizeof(ev_io*));
+  iochan->child_io[0] = calloc(1, sizeof(ev_io));
+  iochan->child_io[1] = calloc(1, sizeof(ev_io));
+  iochan->child_io[2] = calloc(1, sizeof(ev_io));
+  iochan->zmqsocket = zmqsocket;
 
   /* TODO(sissel): attach watchers to the stdout/stderr of the new processes */
   /* child_io[0] is unused, could be stdin, but not needed yet. */
-  ev_io_init(child_io[1], child_io_cb, process->stdout, EV_READ); /* stdout */
-  child_io[1]->data = process;
-  ev_io_start(loop, child_io[1]);
+  ev_io_init(iochan->child_io[1], child_io_cb, process->stdout, EV_READ); /* stdout */
+  iochan->child_io[1]->data = process;
+  ev_io_start(loop, iochan->child_io[1]);
 
-  ev_io_init(child_io[2], child_io_cb, process->stderr, EV_READ); /* stderr */
-  child_io[2]->data = process;
-  ev_io_start(loop, child_io[2]);
+  ev_io_init(iochan->child_io[2], child_io_cb, process->stderr, EV_READ); /* stderr */
+  iochan->child_io[2]->data = process;
+  ev_io_start(loop, iochan->child_io[2]);
+
+  process->data = iochan;
 }
