@@ -25,7 +25,7 @@ void child_timer_cb(EV_P_ ev_timer *watcher, int revents);
 void child_io_cb(EV_P_ ev_io *watcher, int revents);
 void pn_proc_watch_io(struct ev_loop *loop, process_t *process);
 void publish_output(process_t *process, struct proc_io_channel *iochan,
-                    char *data, ssize_t length);
+                    const char *ioname, const char *data, ssize_t length);
 void publish_proc_event(process_t *process, const char *name);
 
 void child_timer_cb(EV_P_ ev_timer *watcher, int revents) {
@@ -58,12 +58,19 @@ void child_io_cb(EV_P_ ev_io *watcher, int revents) {
   process_t *process = (process_t *)watcher->data;
   ssize_t bytes;
   struct proc_io_channel *iochan = process->data;
+  char *ioname = "unknown";
+
+  if (watcher == iochan->child_io[1]) {
+    ioname = "stdout";
+  } else if (watcher == iochan->child_io[2]) {
+    ioname = "stderr";
+  }
 
   /* TODO(sissel): formalize protocol for reads from a process.
-   * Should include: program name, process instance, data
+   * Should include: program name, process instance, stderr/stdout, data
    */
   while ((bytes = read(watcher->fd, buf, 4096)) > 0) {
-    publish_output(process, iochan, buf, bytes);
+    publish_output(process, iochan, ioname, buf, bytes);
   }
 
   if (bytes == 0) {
@@ -75,7 +82,8 @@ void child_io_cb(EV_P_ ev_io *watcher, int revents) {
 } /* child_io_cb */
 
 void publish_output(process_t *process, struct proc_io_channel *iochan,
-                    char *data, ssize_t length) {
+                    const char *ioname, const char *data, ssize_t length) {
+  /* TODO(sissel): move this to a separate file for 'event' streaming */
   zmq_msg_t event;
   int rc;
   size_t msgsize;
@@ -95,8 +103,9 @@ void publish_output(process_t *process, struct proc_io_channel *iochan,
   msgpack_sbuffer *buffer = msgpack_sbuffer_new();
   msgpack_packer *output_msg = msgpack_packer_new(buffer, msgpack_sbuffer_write);
 
-  msgpack_pack_map(output_msg, 4);
+  msgpack_pack_map(output_msg, 5);
 
+  /* "event" => "data" */
   msgpack_pack_string(output_msg, "event", -1);
   msgpack_pack_string(output_msg, "data", -1);
 
@@ -105,6 +114,9 @@ void publish_output(process_t *process, struct proc_io_channel *iochan,
 
   msgpack_pack_string(output_msg, "instance", -1);
   msgpack_pack_int(output_msg, process->instance);
+
+  msgpack_pack_string(output_msg, "source", -1);
+  msgpack_pack_string(output_msg, ioname, -1);
 
   msgpack_pack_string(output_msg, "data", -1);
   msgpack_pack_string(output_msg, data, length);
@@ -117,6 +129,7 @@ void publish_output(process_t *process, struct proc_io_channel *iochan,
 } /* publish_output */
 
 void publish_proc_event(process_t *process, const char *name) {
+  /* TODO(sissel): move this to a separate file for 'event' streaming */
   zmq_msg_t event;
   int rc;
   size_t msgsize;
