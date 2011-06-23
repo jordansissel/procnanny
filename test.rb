@@ -9,7 +9,6 @@ p :connect => socket.connect("tcp://127.0.0.1:3344")
 p :setsockopt => socket.setsockopt(ZMQ::SUBSCRIBE, "")
 
 while true
-  p :reading
   msg = MessagePack.unpack(socket.recv)
-  p msg
+  p msg["event"] => msg
 end

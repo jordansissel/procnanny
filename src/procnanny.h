@@ -10,6 +10,7 @@ struct procnanny {
   size_t programs_len;
 
   void *zmq;
+  void *eventsocket; /* PUB socket */
 }; 
 
 typedef struct procnanny procnanny_t;
