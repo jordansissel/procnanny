@@ -10,6 +10,6 @@ p :setsockopt => socket.setsockopt(ZMQ::SUBSCRIBE, "")
 
 while true
   p :reading
-  msg = socket.recv
-  p :msg => msg
+  msg = MessagePack.unpack(socket.recv)
+  p msg
 end
