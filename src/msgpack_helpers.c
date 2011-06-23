@@ -1,6 +1,11 @@
 #include <msgpack.h>
 #include "msgpack_helpers.h"
 
+void free_msgpack_buffer(void *data, void *hint) {
+  msgpack_sbuffer *buffer = hint;
+  msgpack_sbuffer_free(buffer);
+}
+
 int obj_get(const msgpack_object *obj, const char *name,
             msgpack_object_type type, void *value, size_t *value_len) {
 

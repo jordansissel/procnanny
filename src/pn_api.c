@@ -4,6 +4,7 @@
 #include "pn_api.h"
 #include "insist.h"
 #include "api.h"
+#include "msgpack_helpers.h"
 
 #include <ev.h>
 #include <fcntl.h>
@@ -25,8 +26,6 @@ void api_request_restart(rpc_io *rpcio, msgpack_object *request,
                        msgpack_packer *packer);
 void api_request_status(rpc_io *rpcio, msgpack_object *request_obj,
                         msgpack_packer *response_msg);
-
-void free_msgpack_buffer(void *data, void *hint);
 
 void rpc_cb(EV_P_ ev_io *watcher, int revents) {
   rpc_io *rpcio = (rpc_io *)watcher;
@@ -146,11 +145,6 @@ void rpc_handle(rpc_io *rpcio, zmq_msg_t *request) {
   msgpack_packer_free(response_msg);
   msgpack_unpacked_destroy(&request_msg);
 } /* rpc_handle */
-
-void free_msgpack_buffer(void *data, void *hint) {
-  msgpack_sbuffer *buffer = hint;
-  msgpack_sbuffer_free(buffer);
-}
 
 void start_api(procnanny_t *pn) {
   int rc;

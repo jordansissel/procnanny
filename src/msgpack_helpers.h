@@ -3,6 +3,12 @@
 
 #include <msgpack.h>
 
+#define msgpack_pack_string(packer, string, length) \
+  (length == -1) \
+    ? msgpack_pack_raw(packer, strlen(string)), msgpack_pack_raw_body(packer, string, strlen(string)) \
+    : msgpack_pack_raw(packer, length), msgpack_pack_raw_body(packer, string, length)
+
+
 enum obj_get_return_codes {
   OBJ_GET_SUCCESS = 0,     /* success! */
   OBJ_GET_NOT_FOUND = 1,   /* key name not found */
@@ -23,5 +29,10 @@ enum obj_get_return_codes {
  */
 int obj_get(const msgpack_object *obj, const char *name, msgpack_object_type type, 
             void *value, size_t *value_len);
+
+/**
+ * Helper method for use with zmq_msg_t
+ */
+void free_msgpack_buffer(void *data, void *hint);
 
 #endif /* _MSGPACK_HELPERS_H */

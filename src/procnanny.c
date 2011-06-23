@@ -10,6 +10,14 @@
 #include "pn_api.h"
 #include "insist.h"
 
+#include <msgpack.h>
+#include "msgpack_helpers.h"
+
+struct proc_io_channel {
+  ev_io **child_io;
+  void *zmqsocket;
+};
+
 void start(program_t *program);
 void api_cb(EV_P_ ev_io *watcher, int revents);
 void child_proc_cb(EV_P_ ev_child *watcher, int revents);
@@ -17,11 +25,8 @@ void new_child_timer(process_t *process, double delay);
 void child_timer_cb(EV_P_ ev_timer *watcher, int revents);
 void child_io_cb(EV_P_ ev_io *watcher, int revents);
 void pn_proc_watch_io(struct ev_loop *loop, process_t *process, void *zmqsocket);
-
-struct proc_io_channel {
-  ev_io **child_io;
-  void *zmqsocket;
-};
+void publish_output(process_t *process, struct proc_io_channel *iochan,
+                    char *data, ssize_t length);
 
 void child_timer_cb(EV_P_ ev_timer *watcher, int revents) {
   ev_timer_stop(EV_A_ watcher);
@@ -56,14 +61,7 @@ void child_io_cb(EV_P_ ev_io *watcher, int revents) {
    * Should include: program name, process instance, data
    */
   while ((bytes = read(watcher->fd, buf, 4096)) > 0) {
-    zmq_msg_t event;
-    int rc;
-    size_t msgsize;
-    rc = zmq_msg_init_data(&event, strndup(buf, bytes), bytes, zfree, NULL);
-    zmq_send(iochan->zmqsocket, &event, 0);
-    zmq_msg_close(&event);
-    fprintf(stdout, "%s[%d]: (%d bytes) %.*s\n", pn_proc_program(process)->name,
-            pn_proc_instance(process), bytes, bytes, buf);
+    publish_output(process, iochan, buf, bytes);
   }
 
   if (bytes == 0) {
@@ -73,6 +71,43 @@ void child_io_cb(EV_P_ ev_io *watcher, int revents) {
     free(watcher);
   }
 }
+
+void publish_output(process_t *process, struct proc_io_channel *iochan,
+                    char *data, ssize_t length) {
+  zmq_msg_t event;
+  int rc;
+  size_t msgsize;
+  program_t *program = pn_proc_program(process);
+
+  fprintf(stdout, "%s[%d]: (%d bytes) %.*s\n", pn_proc_program(process)->name,
+          pn_proc_instance(process), length, length, data);
+
+  /* Fields:
+   *  - data (the string read)
+   *  - program name
+   *  - process instance
+   *  - stdout or stderr
+   */
+
+  msgpack_sbuffer *buffer = msgpack_sbuffer_new();
+  msgpack_packer *output_msg = msgpack_packer_new(buffer, msgpack_sbuffer_write);
+
+  msgpack_pack_map(output_msg, 3);
+  msgpack_pack_string(output_msg, "program", -1);
+  msgpack_pack_string(output_msg, program->name, program->name_len);
+
+  msgpack_pack_string(output_msg, "instance", -1);
+  msgpack_pack_int(output_msg, process->instance);
+
+  msgpack_pack_string(output_msg, "data", -1);
+  msgpack_pack_string(output_msg, data, length);
+
+  zmq_msg_init_data(&event, buffer->data, buffer->size, free_msgpack_buffer, buffer); 
+  zmq_send(iochan->zmqsocket, &event, 0);
+  zmq_msg_close(&event);
+
+  msgpack_packer_free(output_msg);
+} /* publish_output */
 
 void restart_child(process_t *process, double delay) {
   ev_timer *timer;
