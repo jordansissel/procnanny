@@ -38,6 +38,11 @@ void pn_proc_move_state(process_t *process, process_state state) {
       }
       break;
   }
+
+  if (state == PROCESS_STATE_STARTING) {
+    process->start_count++;
+  }
+
   process->state = state;
 
   if (program->state_cb != NULL) {
@@ -49,7 +54,6 @@ int pn_proc_start(process_t *process) {
   const program_t *program;
   int rc;
   program = pn_proc_program(process);
-  process->start_count++;
 
   /* set start clock */
   clock_gettime(CLOCK_REALTIME, &process->start_time);
