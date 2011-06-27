@@ -15,17 +15,45 @@ int pn_proc_init(process_t *process, program_t *program, int instance) {
   memset(process, 0, sizeof(process_t));
   process->program = program;
   process->instance = instance;
+  process->start_count = 0;
+  process->flap_count = 0;
+  process->data = NULL;
   return PN_OK;
 } /* int pn_proc_init */
+
+void pn_proc_move_state(process_t *process, process_state state) {
+#define TRANSITION(from, to) (from << 16 | to)
+  program_t *program = pn_proc_program(process);
+  process_state old_state = process->state;
+
+  switch (TRANSITION(old_state, state)) {
+    case TRANSITION(PROCESS_STATE_STARTING, PROCESS_STATE_RUNNING):
+      /* Healthy startup, reset flap count */
+      process->flap_count = 0;
+      break;
+    case TRANSITION(PROCESS_STATE_STARTING, PROCESS_STATE_EXITED):
+      process->flap_count++;
+      if (process->flap_count > program->flap_max) {
+        pn_proc_move_state(process, PROCESS_STATE_BACKOFF);
+      }
+      break;
+  }
+  process->state = state;
+
+  if (program->state_cb != NULL) {
+    program->state_cb(process, old_state, state);
+  }
+} /* pn_proc_move_state */
 
 int pn_proc_start(process_t *process) {
   const program_t *program;
   int rc;
   program = pn_proc_program(process);
+  process->start_count++;
 
   /* set start clock */
   clock_gettime(CLOCK_REALTIME, &process->start_time);
-  process->state = PROCESS_STATE_STARTING;
+  pn_proc_move_state(process, PROCESS_STATE_STARTING);
 
   printf("Starting '%.*s'[%d]: %s ...\n", (int)program->name_len, program->name,
          process->instance, program->command);
@@ -126,7 +154,6 @@ int pn_proc_wait(process_t *process) {
   if (rc >= 0) {
     pn_proc_exited(process, status);
   } /* if rc >= 0 */
-
   return PN_OK;
 } /* pn_proc_wait */
 
@@ -154,7 +181,7 @@ program_t *pn_proc_program(process_t *process) {
 } /* program_t *pn_proc_program */
 
 void pn_proc_exited(process_t *process, int status) { 
-  process->state = PROCESS_STATE_EXITED;
+  pn_proc_move_state(process, PROCESS_STATE_EXITED);
   if (WIFSIGNALED(status)) {
     process->exit_status = -1;
     process->exit_signal = WTERMSIG(status);

@@ -18,6 +18,8 @@ struct process {
   int exit_signal;
   struct timespec start_time;
   struct timespec end_time;
+  long start_count;
+  long flap_count;
 
   /* pointer to parent program */
   struct program *program;
@@ -83,4 +85,8 @@ program_t *pn_proc_program(process_t *process);
  */
 int pn_proc_signal(process_t *process, int signal);
 
+/**
+ * Move this process to a specific state.
+ */
+void pn_proc_move_state(process_t *process, process_state state);
 #endif /* _PROCESS_H_ */

@@ -23,6 +23,12 @@ void pn_prog_init(program_t *program) {
   program->uid = getuid(); /* default uid to current user */
   program->gid = getgid(); /* default gid to current user */
 
+  /* default run time before we switch it to 'running' state */
+  program->minimum_run_duration = 5.0;  
+
+  /* default flap count before we shift to 'backoff' state */
+  program->flap_max = 5;
+
   program->nice = 0;
   program->ionice = 0;
 
@@ -175,7 +181,6 @@ int pn_prog_get(program_t *program, int option_name, void *option_value,
 int pn_prog_start(program_t *program) {
   program->is_running = PN_TRUE;
 
-  /* TODO(sissel): This should use pn_prog_proc_each */
   pn_prog_proc_each(program, i,  process, {
     pn_proc_start(process);
   });
