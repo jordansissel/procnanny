@@ -23,6 +23,7 @@
  * - process restart
  *
  * Fix: ensure io closure before process restarting?
+ * Alternate: Re-use proc_data between process instances
  */
 struct proc_data {
   ev_io **child_io;
