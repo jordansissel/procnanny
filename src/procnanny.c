@@ -59,12 +59,9 @@ void running_state_timer_cb(EV_P_ ev_timer *watcher, int revents) {
   struct proc_data *procdata = process->data;
 
   pn_proc_move_state(process, PROCESS_STATE_RUNNING);
-  //publish_proc_event(process, "running");
 
-  procdata->running_state_timer = NULL;
-  if (procdata->child_io == NULL) {
-    /* Done with procdata */
-    free(procdata);
+  if (procdata->running_state_timer == watcher) {
+    procdata->running_state_timer = NULL;
   }
   free(watcher);
 } /* running_state_timer_cb */
@@ -117,24 +114,7 @@ void child_io_cb(EV_P_ ev_io *watcher, int revents) {
   if (bytes == 0) { /* EOF */
     ev_io_stop(EV_A_ watcher);
     close(watcher->fd);
-    if (watcher == procdata->child_io[1]) {
-      procdata->child_io[1] = NULL;
-    } else if (watcher == procdata->child_io[2]) {
-      procdata->child_io[2] = NULL;
-    }
-
     free(watcher);
-    if (procdata->child_io[0] == NULL && procdata->child_io[1] == NULL
-        && procdata->child_io[2] == NULL) {
-      /* All IOs are closed now */
-      free(procdata->child_io);
-      procdata->child_io = NULL;
-
-      if (procdata->running_state_timer == NULL) {
-        /* done with this procdata */
-        free(procdata);
-      }
-    }
   } /* on EOF */
 } /* child_io_cb */
 
@@ -301,8 +281,7 @@ void child_proc_cb(EV_P_ ev_child *watcher, int revents) {
 
   //publish_proc_event(process, "exited");
   if (procdata->running_state_timer != NULL) {
-    ev_timer_stop(EV_A_ procdata->running_state_timer);
-    free(procdata->running_state_timer);
+    running_state_timer_cb(EV_A_ procdata->running_state_timer, 0);
   }
 
   restart_child(process, 2.0);
@@ -368,9 +347,15 @@ void start(procnanny_t *pn, program_t *program) {
 } /* start */
 
 void pn_proc_watch_io(struct ev_loop *loop, process_t *process) {
-  struct proc_data *procdata = calloc(1, sizeof(struct proc_data));
-  procdata->child_io = calloc(3, sizeof(ev_io*));
-  procdata->child_io[0] = NULL; //calloc(1, sizeof(ev_io));
+
+  if (process->data == NULL) {
+    struct proc_data *procdata = calloc(1, sizeof(struct proc_data));
+    procdata->child_io = calloc(3, sizeof(ev_io*));
+    procdata->child_io[0] = NULL; //calloc(1, sizeof(ev_io));
+    process->data = procdata;
+  }
+
+  struct proc_data *procdata = process->data;
   procdata->child_io[1] = calloc(1, sizeof(ev_io));
   procdata->child_io[2] = calloc(1, sizeof(ev_io));
 
@@ -383,8 +368,6 @@ void pn_proc_watch_io(struct ev_loop *loop, process_t *process) {
   ev_io_init(procdata->child_io[2], child_io_cb, process->stderr, EV_READ); /* stderr */
   procdata->child_io[2]->data = process;
   ev_io_start(loop, procdata->child_io[2]);
-
-  process->data = procdata;
 } /* pn_proc_watch_io */
 
 void pn_proc_state_cb(process_t *process, process_state oldstate,
