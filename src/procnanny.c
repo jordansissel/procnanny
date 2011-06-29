@@ -68,6 +68,7 @@ void running_state_timer_cb(EV_P_ ev_timer *watcher, int revents) {
 
 void start_process(procnanny_t *pn, process_t *process) {
   program_t *program = pn_proc_program(process);
+  program->state_cb = pn_proc_state_cb;
   pn_proc_start(process);
   ev_child *newwatcher = calloc(1, sizeof(ev_child));
   ev_child_init(newwatcher, child_proc_cb, pn_proc_pid(process), 0);
@@ -82,8 +83,6 @@ void start_process(procnanny_t *pn, process_t *process) {
   ev_timer_init(procdata->running_state_timer, running_state_timer_cb,
                 program->minimum_run_duration, program->minimum_run_duration);
   ev_timer_start(pn->loop, procdata->running_state_timer);
-
-  program->state_cb = pn_proc_state_cb;
 } /* start_process */
 
 void child_io_cb(EV_P_ ev_io *watcher, int revents) {
@@ -281,7 +280,9 @@ void child_proc_cb(EV_P_ ev_child *watcher, int revents) {
 
   //publish_proc_event(process, "exited");
   if (procdata->running_state_timer != NULL) {
-    running_state_timer_cb(EV_A_ procdata->running_state_timer, 0);
+    ev_timer_stop(EV_A_ (ev_timer *)procdata->running_state_timer);
+    free(procdata->running_state_timer);
+    //running_state_timer_cb(EV_A_ procdata->running_state_timer, 0);
   }
 
   restart_child(process, 2.0);
@@ -324,7 +325,7 @@ int main() {
 void start(procnanny_t *pn, program_t *program) {
   pn_prog_init(program);
 
-  int nprocs = 1000;
+  int nprocs = 50;
   pn_prog_set(program, PROGRAM_NAME, "hello world", 11);
   pn_prog_set(program, PROGRAM_USER, "jls", -1);
   pn_prog_set(program, PROGRAM_NUMPROCS, &nprocs, sizeof(int));
@@ -334,14 +335,14 @@ void start(procnanny_t *pn, program_t *program) {
 
   args[0] = "ruby";
   args[1] = "-e";
-  args[2] = "sleep(rand * 20); puts Time.now; puts 'hello world'; exit((rand * 10).to_i)";
-
+  args[2] = "sleep(rand * 20); puts 'hello world'; exit((rand * 10).to_i)";
   program->nice = 5;
 
   pn_prog_set(program, PROGRAM_COMMAND, command, strlen(command));
   pn_prog_set(program, PROGRAM_ARGS, args, 3);
 
   pn_prog_proc_each(program, i, process, {
+    pn_proc_move_state(process, PROCESS_STATE_NEW);
     start_process(pn, process);
   });
 } /* start */
@@ -383,7 +384,7 @@ void pn_proc_state_cb(process_t *process, process_state oldstate,
     case PROCESS_STATE_NEW: event = "new"; break;
   }
 
-  printf("State change -> %s\n", event);
+  printf("State change to: %s\n", event);
 
   publish_proc_event(process, event);
 } /* pn_proc_state_cb */

@@ -16,7 +16,7 @@ CFLAGS+=-Isrc
 QUIET?=@
 
 FILES=msgpack_helpers.c pn_api.c pn_util.c process.c procnanny.c program.c \
-      api/restart.c api/status.c
+      api/restart.c api/status.c api/create.c
 OBJECTS=$(addprefix build/, $(subst .c,.o,$(FILES)))
 
 VPATH=src

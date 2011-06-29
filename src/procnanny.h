@@ -11,7 +11,7 @@ struct procnanny {
 
   void *zmq;
   void *eventsocket; /* PUB socket */
-}; 
+};  /* struct procnanny */
 
 typedef struct procnanny procnanny_t;
 

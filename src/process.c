@@ -90,6 +90,10 @@ int pn_proc_start(process_t *process) {
     dup2(pipe_stdout[1], 1); /* redirect stdout */
     dup2(pipe_stdout[2], 2); /* redirect stderr */
 
+    for (i = 3; i < 1024; i++) {
+      close(i);
+    }
+
     /* TODO(sissel): Replace things in the args:
      *   %i - instance number
      *   %p - pid
@@ -185,7 +189,6 @@ program_t *pn_proc_program(process_t *process) {
 } /* program_t *pn_proc_program */
 
 void pn_proc_exited(process_t *process, int status) { 
-  pn_proc_move_state(process, PROCESS_STATE_EXITED);
   if (WIFSIGNALED(status)) {
     process->exit_status = -1;
     process->exit_signal = WTERMSIG(status);
@@ -193,6 +196,7 @@ void pn_proc_exited(process_t *process, int status) {
     process->exit_status = WEXITSTATUS(status);
     process->exit_signal = 0;
   }
+  pn_proc_move_state(process, PROCESS_STATE_EXITED);
 } /* void pn_proc_exited */
 
 int pn_proc_signal(process_t *process, int signal) {

@@ -119,6 +119,7 @@ struct ulimit {
 }; /* struct ulimit */
 
 void pn_prog_init(program_t *program);
+program_t *pn_prog_new(void);
 
 /**
  * Set an option on this program.

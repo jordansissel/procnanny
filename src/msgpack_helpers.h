@@ -10,11 +10,17 @@
 
 
 enum obj_get_return_codes {
-  OBJ_GET_SUCCESS = 0,     /* success! */
-  OBJ_GET_NOT_FOUND = 1,   /* key name not found */
-  OBJ_GET_WRONG_TYPE = 2,  /* requested type is not correct */
-  OBJ_GET_NOT_A_MAP = 3    /* object given is not a msgpack map */
+  OBJ_GET_SUCCESS = 0,        /* success! */
+  OBJ_GET_NOT_FOUND = 1,      /* key name not found */
+  OBJ_GET_WRONG_TYPE = 2,     /* requested type is not correct */
+  OBJ_GET_NOT_A_MAP = 3,      /* object given is not a msgpack map */
+  OBJ_GET_NOT_AN_ARRAY = 4,   /* object given is not a msgpack array */
+  ARRAY_GET_OUT_OF_RANGE = 5  /* array index out of range */
 };
+
+#define MSGPACK_OBJECT_ARRAY_OF_STRING \
+  ((MSGPACK_OBJECT_RAW << 8) | MSGPACK_OBJECT_ARRAY
+#define MSGPACK_OBJECT_ARRAY_TYPE(type) (type >> 8)
 
 /** 
  * Get a value by string name from a msgpack object
@@ -30,6 +36,8 @@ enum obj_get_return_codes {
 int obj_get(const msgpack_object *obj, const char *name, msgpack_object_type type, 
             void *value, size_t *value_len);
 
+int array_get(const msgpack_object *obj, int index,
+              msgpack_object_type type, void *value, size_t *value_len);
 /**
  * Helper method for use with zmq_msg_t
  */

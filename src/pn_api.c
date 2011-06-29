@@ -113,13 +113,15 @@ void rpc_handle(rpc_io *rpcio, zmq_msg_t *request) {
     //msgpack_pack_string(response_msg, "results", 7);
 
     void *clock = zmq_stopwatch_start();
-    /* TODO(sissel): Use gperf here */
+    /* TODO(sissel): Use gperf here or allow methods to register themselves */
     if (!strncmp("dance", method, method_len)) {
       api_request_dance(rpcio, &request_obj, response_msg);
     } else if (!strncmp("restart", method, method_len)) {
       api_request_restart(rpcio, &request_obj, response_msg);
     } else if (!strncmp("status", method, method_len)) {
       api_request_status(rpcio, &request_obj, response_msg);
+    } else if (!strncmp("create", method, method_len)) {
+      api_request_create(rpcio, &request_obj, response_msg);
     } else {
       fprintf(stderr, "Invalid request '%.*s' (unknown method): ", method_len, method);
       msgpack_object_print(stderr, request_obj);
@@ -130,6 +132,8 @@ void rpc_handle(rpc_io *rpcio, zmq_msg_t *request) {
       msgpack_pack_object(response_msg, request_obj);
     }
     double duration = zmq_stopwatch_stop(clock) / 1000000.;
+
+    printf("method '%.*s' took %lf seconds\n", (int)method_len, method);
 
     //msgpack_pack_string(response_msg, "stats", 5);
     //msgpack_pack_map(response_msg, 1),
@@ -181,3 +185,11 @@ void api_request_dance(rpc_io *rpcio, msgpack_object *request,
   msgpack_pack_true(response_msg);
 }
 
+void api_respond_error(msgpack_object *request_obj,
+                       msgpack_packer *response_msg, const char *error) {
+  msgpack_pack_map(response_msg, 2);
+  msgpack_pack_string(response_msg, "error", -1);
+  msgpack_pack_string(response_msg, error, -1);
+  msgpack_pack_string(response_msg, "request", -1);
+  msgpack_pack_object(response_msg, *request_obj);
+} 

@@ -11,6 +11,12 @@
                 name "is a " __STRING(type) " (size=%zd), got size %zd", \
                 sizeof(type), size)
 
+program_t *pn_prog_new(void) {
+  program_t *program = malloc(sizeof(program_t));
+  pn_prog_init(program);
+  return program;
+} /* pn_prog_new */
+
 void pn_prog_init(program_t *program) {
   program->name = NULL;
   program->name_len = 0;
