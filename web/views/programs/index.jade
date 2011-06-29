@@ -1,0 +1,25 @@
+h1 Programs
+
+table(class="programs")
+  tr
+    th(class="program-name-header") Name
+    th(class="program-state-header") State
+    th(class="program-user") User
+    th(class="program-state-header") Children
+    th(class="program-command-header") Command
+  - each program, name in programs
+    tr(id="program-" + name)
+      td(class="program-name")
+        a(href="/programs/" + name)= name
+      td(class="program-state") Happy?
+      td(class="program-user")= program.uid
+      //td(class="program-last-update") = program.last_change.toISOString()
+      td(class="program-user")
+        -each process, instance in program.instances
+          span(id="program-#{name}-#{instance}-state")= instance
+          span= " "
+      td(class="program-command")= program.command + " " + program.args.join(" ")
+
+script
+  ph = new ProcNanny()
+

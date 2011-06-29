@@ -1,0 +1,6 @@
+coffee-script
+express
+jade
+msgpack-0.4
+socket.io
+zeromq

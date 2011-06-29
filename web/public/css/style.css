@@ -1,0 +1,52 @@
+body {
+  background-image: url("/media/trollface.jpg");
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: right bottom;
+}
+
+table.programs {
+
+}
+
+table.programs th.program-state-header {
+  width: 8em;
+}
+
+table.programs td.program-last-update {
+  white-space: nowrap;
+}
+
+table.programs th {
+  text-align: left;
+}
+
+table.programs td {
+  padding-left: 4px;
+  vertical-align: top;
+}
+
+table.programs .program-running {
+  background-color: #7BFF57;
+}
+
+table.programs .program-starting {
+  background-color: #E9FF57;
+}
+
+table.programs .program-exited {
+  background-color: #FF7575;
+}
+
+table.programs td.program-name {
+  white-space: nowrap;
+}
+
+pre.stdout, pre.stderr {
+  //border: 1px solid grey;
+  //margin: 0.4em;
+  //padding: 0.4em;
+  //width: 90%;
+  //height: 15em;
+  //overflow: auto;
+}
