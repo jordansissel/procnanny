@@ -25,7 +25,7 @@ default: procnanny
 
 clean:
 	rm -f $(OBJECTS)
-	rm -r build/
+	rmdir build/api build
 
 %.c %.h: Makefile
 program.c: program.h process.h
