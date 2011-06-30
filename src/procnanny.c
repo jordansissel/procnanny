@@ -111,6 +111,8 @@ void child_io_cb(EV_P_ ev_io *watcher, int revents) {
   }
 
   if (bytes == 0) { /* EOF */
+    //program_t *program = pn_proc_program(process);
+    //printf("EOF[%d] on %s, %.*s\n", watcher->fd, ioname, program->name_len, program->name);
     ev_io_stop(EV_A_ watcher);
     close(watcher->fd);
     free(watcher);
