@@ -144,6 +144,8 @@ int pn_proc_start(process_t *process) {
   close(pipe_stdout[1]);
   close(pipe_stderr[1]);
 
+  close(pipe_stdin[1]); /* We don't care about stdin anyway */
+
   /* set nonblock */
   fcntl(process->stdout, F_SETFL, O_NONBLOCK);
   fcntl(process->stderr, F_SETFL, O_NONBLOCK);
